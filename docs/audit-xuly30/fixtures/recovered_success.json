@@ -1,0 +1,9 @@
+{
+  "endpoint": "/Lading/Inventory/Recovered",
+  "requestData": "Id%5B0%5D%5BIdWarehouse%5D=-1&Id%5B0%5D%5BIdLadingToPostman%5D=ID_LADING_TO_POSTMAN_SAMPLE",
+  "response": {
+    "Code": "00",
+    "Message": "Cập nhập dữ liệu thành công 1/1"
+  }
+}
+

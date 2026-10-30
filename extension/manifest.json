@@ -40,7 +40,8 @@
         "core/address-resolver.js",
         "core/model-builder.js",
         "core/process-one.js",
-        "page/executor.js"
+        "page/executor.js",
+        "page/xuly30-page.js"
       ],
       "world": "MAIN",
       "run_at": "document_idle"

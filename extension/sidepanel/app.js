@@ -243,6 +243,7 @@
       try { env = await window.VNPPageBridge.check(); } catch (e) { env = { ok: false, message: String((e && e.message) || e) }; }
       if (!env.ok) { showEnvAlert(env.message); return; }
     }
+    if (window.VNPBusy) { alert('Đang chạy Xử lý 3.0. Hãy chờ xong rồi mới chạy Chuyển tiếp để tránh hai quy trình tranh nhau tab Pack & Send.'); return; }
     currentMode = mode;
     startTimeMs = Date.now();
     alertSession.classList.add('hidden');

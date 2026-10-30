@@ -680,3 +680,212 @@ table.log-table tr:hover {
   letter-spacing: 0.3px;
 }
 
+/* ==========================================================================
+   Tab Navigation & Module Xử Lý 3.0 Styles
+   ========================================================================== */
+
+.app-tabs {
+  display: flex;
+  background: #FFFFFF;
+  border-bottom: 2px solid var(--border);
+  padding: 0 8px;
+  gap: 6px;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+}
+
+.tab-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 8px;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  top: 2px;
+}
+
+.tab-btn:hover {
+  color: var(--primary);
+  background: var(--bg-app);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+
+.tab-btn.active {
+  color: var(--primary);
+  border-bottom-color: var(--secondary);
+}
+
+.tab-icon {
+  font-size: 15px;
+}
+
+.tab-badge {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 1px 6px;
+  background: var(--secondary-light);
+  color: var(--secondary-hover);
+  border: 1px solid rgba(255, 158, 27, 0.3);
+  border-radius: var(--radius-full);
+}
+
+.tab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.badge-tag {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--primary);
+  background: var(--primary-light);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+/* 4-Step Stepper Component */
+.stepper-wrap {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  padding: 8px 4px 4px;
+}
+
+.stepper-wrap::before {
+  content: '';
+  position: absolute;
+  top: 20px;
+  left: 24px;
+  right: 24px;
+  height: 2px;
+  background: var(--border);
+  z-index: 1;
+}
+
+.step-item {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
+.step-num {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  border: 2px solid var(--border);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s ease;
+}
+
+.step-name {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.2;
+}
+
+.step-status {
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--text-subtle);
+}
+
+/* Stepper States */
+.step-item.active .step-num {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #FFFFFF;
+  box-shadow: 0 0 0 4px var(--primary-light);
+}
+.step-item.active .step-name {
+  color: var(--primary);
+}
+.step-item.active .step-status {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.step-item.done .step-num {
+  background: var(--success);
+  border-color: var(--success);
+  color: #FFFFFF;
+}
+.step-item.done .step-name {
+  color: var(--text-main);
+}
+.step-item.done .step-status {
+  color: var(--success);
+  font-weight: 700;
+}
+
+.step-item.error .step-num {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #FFFFFF;
+}
+.step-item.error .step-name {
+  color: var(--danger);
+}
+.step-item.error .step-status {
+  color: var(--danger);
+  font-weight: 700;
+}
+
+/* Mini Step Badges in Table */
+.step-badge {
+  display: inline-block;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  text-align: center;
+  min-width: 22px;
+}
+.step-badge.ok {
+  background: var(--success-bg);
+  color: var(--success);
+  border: 1px solid var(--success-border);
+}
+.step-badge.fail {
+  background: var(--danger-bg);
+  color: var(--danger);
+  border: 1px solid var(--danger-border);
+}
+.step-badge.unknown {
+  background: var(--warning-bg);
+  color: var(--warning);
+  border: 1px solid var(--warning-border);
+}
+.step-badge.skip {
+  background: #F1F5F9;
+  color: var(--text-muted);
+  border: 1px solid #CBD5E1;
+}
+.step-badge.pending {
+  background: transparent;
+  color: var(--text-subtle);
+}
+
+

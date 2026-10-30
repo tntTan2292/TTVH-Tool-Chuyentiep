@@ -1,0 +1,8 @@
+{
+  "endpoint": "/Lading/Inventory/DivideRecovered",
+  "response": {
+    "Code": "00",
+    "Message": "Cập nhập dữ liệu thành công."
+  }
+}
+

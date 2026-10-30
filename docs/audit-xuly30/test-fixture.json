@@ -1,0 +1,45 @@
+{
+  "testBatch": {
+    "batchId": "BATCH-TEST-20261030-02",
+    "description": "Bưu gửi kiểm chứng luồng Xử lý 3.0 (4 bước)",
+    "postmanId": "53B058",
+    "postmanName": "53B058 - HỒ THỊ THANH GIANG",
+    "routeCode": "533140114",
+    "routeName": "533140114 - 533140 - Chuyển tiếp",
+    "poCode": "533140",
+    "items": [
+      {
+        "ladingCode": "EL533085492VN",
+        "step1_vuHoi": {
+          "endpoint": "/Lading/Inventory/Recovered",
+          "status": "PASSED"
+        },
+        "step2_giaoLai": {
+          "endpoint": "/Lading/Inventory/DivideRecovered",
+          "status": "PASSED"
+        },
+        "step3_lapBD13": {
+          "url": "/lap-ban-ke-bd13.html",
+          "endpoint": "/Lading/Home/CreateBD13Multi",
+          "method": "POST",
+          "columnTarget": "SL bưu gửi chưa lập BD13",
+          "targetColIndex": 7,
+          "expectedResponse": {
+            "Code": "00"
+          },
+          "status": "PASSED"
+        },
+        "step4_chuyen30": {
+          "url": "/thêm-mới-vu-hồi-chuyến-thư.html",
+          "endpoints": [
+            "/Lading/Home/SearchManageMailtripByExcel",
+            "/Lading/LadingDivided/AcceptAddBackMailTripMulti"
+          ],
+          "excelFile": "mau-import-3.8.1.xlsx",
+          "actualResponse": "Cập nhật thành công 1/1 bưu gửi.",
+          "status": "PASSED"
+        }
+      }
+    ]
+  }
+}

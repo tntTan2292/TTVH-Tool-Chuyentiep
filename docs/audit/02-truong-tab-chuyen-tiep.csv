@@ -1,0 +1,21 @@
+STT,NhanHienThi,Selector,LoaiControl,BatBuoc,DinhDang_Regex,GiaTriMacDinh,PhuThuoc,GhiChu
+1,Mã vận đơn (*),input#LadingCode,input[type="text"],Có (Readonly),Chuỗi mã 13 ký tự,Trích xuất từ bưu gửi gốc,Không,Khóa (disabled)
+2,Bưu cục phát (*),input#PosName,input[type="text"],Có (Readonly),Tên bưu cục,Tên bưu cục hiện tại,Không,Khóa (disabled)
+3,Tuyến phát (*),input#RouteName,input[type="text"],Có (Readonly),Tên tuyến phát,Trích xuất từ bưu gửi gốc,Không,Khóa (disabled)
+4,Bưu tá phát (*),input#PostManName,input[type="text"],Có (Readonly),Tên bưu tá,Bưu tá phát hiện tại,Không,Khóa (disabled)
+5,Lý do (*),input#ReasonName,input[type="text"],Có (Readonly),Mã và tên lý do,Trích xuất từ bưu gửi gốc,Không,Khóa (disabled)
+6,Hướng xử lí (*),input#SolutionName,input[type="text"],Có (Readonly),Mã và tên hướng xử lý,Trích xuất từ bưu gửi gốc,Không,Khóa (disabled)
+7,Họ tên người nhận (*),input#ReceiverNameReturn,input[type="text"],Bắt buộc nhập,Chuỗi ký tự tối đa 250 ký tự,Rỗng,Không,validate[required]
+8,Địa chỉ người nhận (*),input#ReceiverAddressReturn,input[type="text"],Bắt buộc nhập,Chuỗi địa chỉ chi tiết,Rỗng,Không,validate[required]
+9,Điện thoại (*),input#NextPhone,input[type="text"],Bắt buộc nhập,Chuỗi 10 số bắt đầu bằng 0,Rỗng,Không,validate[required]
+10,Email,input#NextEmail,input[type="text"],Không (Tùy chọn),Định dạng email chuẩn,Rỗng,Không,Có kiểm tra regex nếu có nhập
+11,Ngày chuyển (*),input#ReturnDate,input[type="text"],Có (Readonly),dd/MM/yyyy HH:mm:ss,Thời gian hiện tại,Không,Khóa (disabled)
+12,Bưu cục khác,input[name="ckAddressReturnType"][value="2"],input[type="radio"],Bắt buộc chọn 1 trong 2,Giá trị "2",Mặc định chọn,Điều khiển txtOtherPostOffice,Mặc định checked
+13,Bưu cục chuyển đến,input#txtOtherPostOffice,input[type="text"],Bắt buộc khi chọn Radio 2,Tên hoặc mã bưu cục,Rỗng,Radio 2 (Bưu cục khác),Thêm validate[required] động
+14,Địa chỉ,input[name="ckAddressReturnType"][value="3"],input[type="radio"],Bắt buộc chọn 1 trong 2,Giá trị "3",Không chọn,Điều khiển cbProvince và cbWard,Mở khóa dropdown Tỉnh Xã
+15,Tỉnh/Thành chuyển đến,select#cbProvince,select,Bắt buộc khi chọn Radio 3,Mã tỉnh (34 tỉnh thành),Rỗng,Radio 3 (Địa chỉ),Kích hoạt ProvinceChange(this.value)
+16,Phường/Xã chuyển đến,select#cbWard,select,Bắt buộc khi chọn Radio 3,Mã phường/xã,Rỗng,select#cbProvince,Nạp động qua /Order/Home/GetWard
+17,Ghi chú,textarea#NoteReturn,textarea,Không (Tùy chọn),Văn bản tự do,Rỗng,Không,Ghi chú thêm
+18,In BĐ30,button#printBD30ItemForward,button,Không,N/A,N/A,Không,In ấn phẩm BĐ30
+19,Cập nhật,button.btn-primary,button,Thao tác submit,N/A,N/A,Không,Gọi UpdateItemForward()
+20,Hủy,button.btn-default,button,Thao tác đóng,N/A,N/A,Không,data-dismiss="modal"

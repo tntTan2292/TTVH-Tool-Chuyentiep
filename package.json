@@ -1,0 +1,10 @@
+{
+  "name": "tool-chuyentiep",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Chrome Extension nhập chuyển tiếp bưu gửi hàng loạt cho VNPost Pack & Send",
+  "scripts": {
+    "test": "node --test",
+    "pack": "node tools/pack.js"
+  }
+}

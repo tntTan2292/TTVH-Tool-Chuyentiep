@@ -1,0 +1,93 @@
+HƯỚNG DẪN CÀI ĐẶT VÀ SỬ DỤNG
+TIỆN ÍCH "CHUYỂN TIẾP HÀNG LOẠT" - VNPOST PACK & SEND
+(Bản chạy thử cho bưu cục)
+
+=====================================================
+A. CÀI ĐẶT (làm 1 lần trên mỗi máy)
+=====================================================
+Yêu cầu: máy Windows dùng Google Chrome hoặc Microsoft Edge phiên bản 114 trở lên.
+(Kiểm tra: gõ chrome://settings/help vào thanh địa chỉ. Nếu cũ hơn, bấm cập nhật.)
+
+1. Giải nén file .zip vào một thư mục cố định, ví dụ D:\ChuyenTiep.
+   Không giải nén vào thư mục tạm, và không xóa hoặc di chuyển thư mục này sau khi cài.
+2. Mở Chrome, gõ vào thanh địa chỉ:  chrome://extensions   (Edge: edge://extensions)
+3. Bật công tắc "Chế độ nhà phát triển" (Developer mode) ở góc trên bên phải.
+4. Bấm "Tải tiện ích đã giải nén" (Load unpacked), chọn thư mục tên "extension" bên trong thư mục vừa giải nén.
+5. Bấm biểu tượng mảnh ghép trên thanh công cụ, ghim tiện ích "VNPost PNS - Chuyển Tiếp Hàng Loạt" cho dễ mở.
+
+Lưu ý: mỗi lần mở Chrome, trình duyệt có thể hiện thông báo "Hãy tắt các tiện ích ở chế độ nhà phát triển".
+Cứ bấm "Hủy" hoặc đóng thông báo, không bấm tắt tiện ích.
+
+=====================================================
+B. CÁCH DÙNG
+=====================================================
+1. Đăng nhập Pack & Send, vào mục "3.9 Quản lý vận đơn" (màn có ô Mã vận đơn).
+2. Bấm F5 một lần (chỉ cần sau khi cài, hoặc sau khi tải lại trang).
+3. Giữ tab này ở trang 3.9. Bấm biểu tượng tiện ích để mở bảng điều khiển bên phải.
+4. Chuẩn bị file Excel (xem mục C). Kéo thả file vào bảng điều khiển.
+5. Xem "Kiểm tra trước": dòng nào lỗi sẽ được liệt kê và sẽ không được gửi.
+6. Bấm "Chạy thử (không lưu)": công cụ tra cứu từng bưu gửi và báo dòng nào sẽ thành công hay lỗi.
+   KHÔNG ghi gì vào hệ thống. Luôn làm bước này trước.
+7. Khi chạy thử ổn, bấm "Chạy thật". Một hộp cảnh báo hiện ra, đọc kỹ rồi xác nhận.
+8. Chạy xong sẽ có bảng tổng kết: "Thành công X / Tổng N - Thất bại Y" kèm nguyên nhân từng bưu gửi.
+   Bấm "Tải file kết quả" để lưu file Excel kết quả về máy và kiểm tra.
+
+Có thể bấm "Tạm dừng", "Tiếp tục", "Dừng hẳn" trong lúc chạy.
+
+=====================================================
+C. CÁCH ĐIỀN FILE EXCEL
+=====================================================
+Dùng file mẫu "mau-import-chuyen-tiep.xlsx". Giữ nguyên dòng tiêu đề (dòng 1). Dòng 2 là dòng mô tả, công cụ tự bỏ qua.
+Mỗi dòng là 1 bưu gửi.
+
+  MA_BG                  Mã bưu gửi (bắt buộc). Bưu gửi phải đang ở trạng thái "Bưu gửi chuyển tiếp".
+  HO_TEN_NGUOI_NHAN      Họ tên người nhận mới (bắt buộc).
+  DIA_CHI_NGUOI_NHAN     Địa chỉ người nhận mới (bắt buộc).
+  SO_DIEN_THOAI          Số điện thoại (bắt buộc).
+  LOAI_CHUYEN_TIEP       BUU_CUC (chuyển đến bưu cục khác) hoặc DIA_CHI (chuyển theo địa chỉ).
+                         Có thể để trống: công cụ tự đoán theo các cột bên dưới.
+  BUU_CUC_CHUYEN_DEN     Cần khi chọn BUU_CUC. Nhập mã bưu cục (6 số, ví dụ 536250).
+  MA_TINH                Cần khi chọn DIA_CHI. Nhập TÊN tỉnh/thành (ví dụ Huế) hoặc mã số đều được.
+  MA_PHUONG_XA           Cần khi chọn DIA_CHI. Nhập TÊN phường/xã (ví dụ Thủy Xuân) hoặc mã số đều được.
+  EMAIL, GHI_CHU         Không bắt buộc.
+Các cột KET_QUA, MA_LOI, NGUYEN_NHAN, THOI_GIAN_XU_LY để trống, công cụ tự điền vào file kết quả.
+
+Lưu ý:
+- Công cụ không kiểm tra nội dung bạn nhập có đúng địa bàn hay không, bạn tự chịu trách nhiệm nội dung.
+- Số điện thoại, mã bưu gửi: để định dạng Text (file mẫu đã đặt sẵn) để không mất số 0 đầu.
+- Mỗi lần tối đa 500 bưu gửi.
+- Tên phường/xã phải tìm thấy trên hệ thống. Nếu có hai xã chỉ khác nhau ở dấu, hãy gõ đúng dấu.
+
+=====================================================
+D. LƯU Ý QUAN TRỌNG
+=====================================================
+- "Chạy thật" ghi vào hệ thống và KHÔNG hoàn tác được. Hãy thử vài bưu gửi trước khi chạy danh sách dài.
+- Trong lúc chạy: giữ tab Pack & Send ở trang 3.9, đừng tự tìm kiếm hay thao tác trên tab đó (bảng kết quả sẽ nhảy theo từng bưu gửi, đó là bình thường).
+- Đừng đóng bảng điều khiển khi đang chạy: tiến độ sẽ mất.
+- Nếu muốn chạy lại cùng một file: bỏ các dòng đã "Thành công", nếu không chúng sẽ bị gửi lại.
+- Hết phiên đăng nhập: công cụ tự tạm dừng. Đăng nhập lại, quay về trang 3.9, bấm "Tiếp tục".
+
+=====================================================
+E. CÁC MÃ KẾT QUẢ THƯỜNG GẶP
+=====================================================
+  Thành công             Đã chuyển tiếp xong.
+  E01 - E07              Dòng Excel thiếu thông tin hoặc sai quy tắc của trang (họ tên, địa chỉ, SĐT, bưu cục, tỉnh/xã...).
+  E08                    Mã bưu gửi trùng trong file.
+  E09                    Mã bưu gửi trống.
+  E10                    Không tìm thấy bưu gửi trên hệ thống.
+  E11                    Bưu gửi chưa ở trạng thái "Bưu gửi chuyển tiếp".
+  E12                    Không tìm thấy (hoặc khớp nhiều) tên Tỉnh/Phường-Xã.
+  E20                    Hệ thống VNPost từ chối, lý do ghi ở cột NGUYEN_NHAN.
+  E90                    Hết phiên đăng nhập hoặc không thấy tab Pack & Send.
+  E91                    Chưa xử lý vì đã dừng giữa chừng.
+  E98 "Không rõ"         Mất kết nối đúng lúc gửi, không biết đã lưu chưa. KIỂM TRA THỦ CÔNG trên hệ thống.
+  E99                    Lỗi đường truyền hoặc máy chủ.
+
+Nếu tất cả bưu gửi đều báo E10 trong khi tìm tay thấy: hãy kiểm tra đang ở đúng trang 3.9, tải lại trang (F5) rồi thử lại.
+
+=====================================================
+F. BÁO LỖI
+=====================================================
+Gửi cho người phụ trách: file kết quả đã tải về và ảnh chụp bảng tổng kết.
+KHÔNG gửi tài khoản, mật khẩu.
+Phiên bản chạy thử: đường chuyển tiếp "theo địa chỉ" (tỉnh/phường-xã) mới được thử ở mức kiểm tra, chưa chạy thật nhiều.

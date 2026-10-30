@@ -1,0 +1,61 @@
+<div class="table-responsive">
+    <table class="table table-hover table-condensed" id="table_lading">
+        <thead>
+            <tr>
+                <th style="width: 20px;"><input type="checkbox" id="chkAll"></th>
+                <th style="width: 30px;">STT</th>
+                <th>Thông tin Vận đơn</th>
+                <th>DV GTGT theo MPIT</th>
+                <th>Người gửi</th>
+                <th>Người nhận</th>
+                <th>Sản phẩm</th>
+                <th>Trạng thái</th>
+                <th>Trạng thái kho</th>
+                <th>Chứng từ chuyển trả</th>
+                <th>Thông tin liên quan</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr id="tr_BG_TEST_01">
+                <td><input type="checkbox" class="checkMe" id="ck-3816805771" value="BG_TEST_01"></td>
+                <td>1</td>
+                <td>
+                    <span class="lading-code" title="BG_TEST_01">BG_TEST_01</span>
+                    <br>
+                    <small>24/10/2026 14:40</small>
+                    <br>
+                    <span>250.000 đ</span>
+                </td>
+                <td>GTG021</td>
+                <td>
+                    <b>NGUOI_GUI_TEST</b>
+                    <br>
+                    <span>AN PHƯỚC, P. An Bình, Tỉnh Đồng Tháp</span>
+                </td>
+                <td>
+                    <b>NGUOI_NHAN_TEST</b>
+                    <br>
+                    <span>Số 20/15 Đường Sử Hy Nhang, P. Thủy Xuân, TP. Huế</span>
+                    <br>
+                    <span>0900000000</span>
+                </td>
+                <td>
+                    <span>KL(g): 1</span><br>
+                    <span>KL Thực tế: 9.000</span>
+                </td>
+                <td>
+                    <span class="label label-info">Bưu gửi chuyển tiếp</span>
+                    <br>
+                    <a class="btn btn-xs btn-primary" href="#" onclick="GetUpdateItemForward('BG_TEST_01', 'C39', 'NGUOI_NHAN_TEST', 'Số 20/15 Đường Sử Hy Nhang, P. Thủy Xuân, TP. Huế')">
+                        <i class="fa fa-pencil"></i> <span class="glyphicon"></span> Thêm thông tin chuyển tiếp
+                    </a>
+                    <br>
+                    <a class="btn btn-xs btn-default" href="#"><i class="fa fa-print"></i> In ấn phẩm</a>
+                </td>
+                <td>Chưa yêu cầu nhập kho</td>
+                <td></td>
+                <td></td>
+            </tr>
+        </tbody>
+    </table>
+</div>

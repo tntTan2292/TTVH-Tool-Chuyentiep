@@ -1,0 +1,205 @@
+<div class="modal fade in" id="md_update_item_forward" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true" style="display: block;">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                <h4 class="modal-title">Bưu gửi chuyển tiếp</h4>
+            </div>
+            <div class="modal-body">
+                <form id="fUpdateItemForward">
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label>Mã vận đơn (*)</label>
+                            <input type="text" id="LadingCode" name="LadingCode" class="form-control" value="BG_TEST_01" disabled="disabled">
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label>Bưu cục phát (*)</label>
+                            <input type="text" id="PosName" name="PosName" class="form-control" value="BCVH Thuận Hóa" disabled="disabled">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label>Tuyến phát (*)</label>
+                            <input type="text" id="RouteName" name="RouteName" class="form-control" value="533140 - Chuyển tiếp" disabled="disabled">
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label>Bưu tá phát (*)</label>
+                            <input type="text" id="PostManName" name="PostManName" class="form-control" value="BUU_TA_TEST" disabled="disabled">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 form-group">
+                            <label>Lý do (*)</label>
+                            <input type="text" id="ReasonName" name="ReasonName" class="form-control" value="21. Bưu gửi lạc hướng" disabled="disabled">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 form-group">
+                            <label>Hướng xử lí (*)</label>
+                            <input type="text" id="SolutionName" name="SolutionName" class="form-control" value="3.Chuyển tiếp sang địa chỉ mới" disabled="disabled">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label>Họ tên người nhận (*)</label>
+                            <input type="text" id="ReceiverNameReturn" name="ReceiverNameReturn" class="form-control validate[required]" value="">
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label>Địa chỉ người nhận (*)</label>
+                            <input type="text" id="ReceiverAddressReturn" name="ReceiverAddressReturn" class="form-control validate[required]" value="">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 form-group">
+                            <label>Điện thoại (*)</label>
+                            <input type="text" id="NextPhone" name="NextPhone" class="form-control validate[required]" value="">
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label>Email</label>
+                            <input type="text" id="NextEmail" name="NextEmail" class="form-control" value="">
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label>Ngày chuyển (*)</label>
+                            <input type="text" id="ReturnDate" name="ReturnDate" class="form-control validate[required]" value="29/10/2026 08:42:29" disabled="disabled">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label><input type="radio" name="ckAddressReturnType" value="2" checked="checked" onchange="AddressReturnTypeChange(this.value)"> Bưu cục khác</label>
+                        </div>
+                        <div class="col-md-8">
+                            <input type="text" id="txtOtherPostOffice" name="txtOtherPostOffice" class="form-control" placeholder="Mã hoặc tên bưu cục khác">
+                        </div>
+                    </div>
+                    <div class="row" style="margin-top:10px;">
+                        <div class="col-md-4">
+                            <label><input type="radio" name="ckAddressReturnType" value="3" onchange="AddressReturnTypeChange(this.value)"> Địa chỉ</label>
+                        </div>
+                        <div class="col-md-4">
+                            <select id="cbProvince" name="cbProvince" class="form-control" disabled="disabled" onchange="ProvinceChange(this.value)">
+                                <option value="">--- Tỉnh ---</option>
+                                <option value="88">An Giang</option>
+                                <option value="53">Huế</option>
+                                <option value="10">Hà Nội</option>
+                                <option value="70">Hồ Chí Minh</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <select id="cbWard" name="cbWard" class="form-control" disabled="disabled">
+                                <option value="">---Phường, xã---</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row" style="margin-top:10px;">
+                        <div class="col-md-12 form-group">
+                            <textarea id="NoteReturn" name="NoteReturn" class="form-control" placeholder="Ghi chú"></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-primary" id="printBD30ItemForward">In BĐ30</button>
+                <button type="button" class="btn btn-primary" onclick="UpdateItemForward()">Cập nhật</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    var _newModel = {
+        "Id": 2286326613,
+        "LadingCode": "BG_TEST_01",
+        "StatusCode": "C39",
+        "StatusName": "Bưu gửi chuyển tiếp",
+        "StatusDate": "20261028",
+        "StatusTime": "170647",
+        "PoCode": "533140",
+        "PosName": "BCVH Thuận Hóa",
+        "ReasonCode": "45",
+        "ReasonName": "21. Bưu gửi lạc hướng",
+        "SolutionCode": "C",
+        "SolutionName": "3.Chuyển tiếp sang địa chỉ mới",
+        "PostManId": 46267,
+        "PostManName": "BUU_TA_TEST",
+        "SenderName": "NGUOI_GUI_TEST",
+        "SenderAddress": "AN PHƯỚC, P. An Bình, Đồng Tháp, Tỉnh Đồng Tháp",
+        "ReceiverName": "NGUOI_NHAN_TEST",
+        "ReceiverAddress": "DIA_CHI_NHAN_TEST",
+        "Note": "",
+        "CollectAmount": 250000,
+        "IsPaypost": "",
+        "Signature": "",
+        "RouteCode": "533140114",
+        "RouteName": "533140 - Chuyển tiếp",
+        "ShiftId": "0",
+        "AcceptPOCode": "872100",
+        "IsReturn": false,
+        "ReceiverNameReturn": "",
+        "ReceiverAddressReturn": "",
+        "MethodReturn": "0",
+        "ReturnDate": "29/10/2026 08:42:29",
+        "AddressReturnType": "2",
+        "AddressReturn": "",
+        "AddressReturnId": "",
+        "NoteReturn": "",
+        "IsNext": false,
+        "NextPhone": "0900000000",
+        "NextEmail": "",
+        "IsReturnDocument": false,
+        "ReturnDocumentType": 0,
+        "ReturnDocument": "",
+        "Weight": 0,
+        "ReturnFee": 0,
+        "LadingCodeReturn": "",
+        "SourceChannel": "PNS",
+        "UpdateBy": 0,
+        "ServiceAddedDoNotUse": "",
+        "ServiceAddedDoNotUseFee": "",
+        "ServiceAddedDoNotUseAmount": 0,
+        "FeeAtReceiver": 0,
+        "BatchCode": "",
+        "FeeCODAtReceiver": 0,
+        "FeeCPPAAtReceiver": 0,
+        "PostmanCode": null,
+        "IsPaymentBatch": "N",
+        "PaymentLadingCode": "",
+        "AuthenType": 0,
+        "ReceiverPID": null,
+        "ReceiverBirthday": null,
+        "ReceiverPIDDate": null,
+        "ReceiverPIDWhere": null,
+        "ReceiverAddressDetail": null,
+        "ImageDelivery": "2026102817/0015/09f3fd16-9290-42f6-a09a-12fdbb5dd091.png",
+        "ImageAuthen": null,
+        "VATCode": "",
+        "SenderProvinceId": 87,
+        "ImageAuthenPlus": null,
+        "IsLockAddPhotos": null,
+        "DeliveryAmount": 0,
+        "ReturnAmount": 0,
+        "ReturnImage": "",
+        "FeeShip": 0,
+        "FeePPA": 0,
+        "FeeCollectLater": 0,
+        "IsCancelDelivery": true,
+        "RadiusName": "",
+        "Radius": 0,
+        "Distance": 0,
+        "POAcceptedName": null,
+        "Warehouse_status": null,
+        "ReasonCancelOrder": "",
+        "IsExchange": false,
+        "ExchangePODeliveryCode": null,
+        "ExchangeRouteCode": null,
+        "ExchangeLadingCode": null,
+        "ExchangeDeliveryDate": 0,
+        "ExchangeDeliveryTime": 0,
+        "ExchangeDetails": null,
+        "ExchangeImage": null,
+        "ReturnReceiverTel": "",
+        "NFC3StatusCode": "",
+        "NFC3ReasonText": "",
+        "NFC3DeviceName": ""
+    };
+</script>

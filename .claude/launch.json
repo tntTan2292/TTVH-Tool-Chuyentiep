@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "sidepanel-preview",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8765", "--directory", "extension"],
+      "port": 8765
+    },
+    {
+      "name": "package-check",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8766", "--directory", "dist/VNPost-ChuyenTiep-v0.9.0/extension"],
+      "port": 8766
+    }
+  ]
+}

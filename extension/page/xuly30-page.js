@@ -11,15 +11,18 @@
 
   var isNode = typeof module === 'object' && module.exports;
 
+  // Tăng khi đổi hành vi: cầu nối sẽ tự tải lại tab nếu trang còn giữ bản script cũ.
+  var VERSION = 15;
+
   var CONFIG = {
-    separator: ',',        // ký tự ngăn cách nhiều mã ở ô "Mã bưu gửi" của 6.2 (CHƯA XÁC MINH, xem docs/audit-xuly30/00)
     ajaxTimeoutMs: 30000,
     uiTimeoutMs: 10000,
     settleMs: 250
   };
 
   var PAGES = {
-    '6.2': { match: 'danh-sach-cho-nhap-kho', url: 'https://packnsend.vnpost.vn/quan-ly-kho/danh-sach-cho-nhap-kho.html' },
+    // 6.2 dùng chung phần đầu địa chỉ với 6.1 (danh-sach-cho-nhap-kho), nên nhận diện bằng nội dung trang, không bằng URL.
+    '6.2': { match: '', url: '' },
     '3.2': { match: 'lap-ban-ke-bd13', url: 'https://packnsend.vnpost.vn/lap-ban-ke-bd13.html' },
     '3.8.1': { match: 'thêm-mới-vu-hồi-chuyến-thư', url: 'https://packnsend.vnpost.vn/' + encodeURI('thêm-mới-vu-hồi-chuyến-thư.html') }
   };
@@ -115,9 +118,19 @@
   function where() {
     var p;
     try { p = decodeURIComponent(location.pathname).normalize('NFC'); } catch (e) { p = location.pathname; }
-    var keys = Object.keys(PAGES);
-    for (var i = 0; i < keys.length; i++) if (p.indexOf(PAGES[keys[i]].match) !== -1) return keys[i];
+    if (p.indexOf(PAGES['3.2'].match) !== -1) return '3.2';
+    if (p.indexOf(PAGES['3.8.1'].match) !== -1) return '3.8.1';
+    if (byId('tbl_inventory') || p.indexOf('danh-sach-cho-nhap-kho') !== -1) return is62() ? '6.2' : '6.1';
     return '';
+  }
+
+  // 6.1 (chờ nhập kho) và 6.2 (chờ nhập kho/vu hồi) là hai màn khác nhau nhưng giống nhau về bảng và ô tìm.
+  // 6.2 có nút "Vu hồi" / modal giao lại; không dùng chữ trên menu trái vì menu luôn chứa chữ "Vu hồi".
+  function is62() {
+    if (byId('modal_refresh_recovered')) return true;
+    var bc = document.querySelector('.breadcrumb');
+    if (bc && plain(bc.textContent).indexOf('vu hoi') !== -1) return true;
+    return !!findButton('Vu hồi');
   }
 
   function visible(el) {
@@ -170,6 +183,8 @@
     });
   }
 
+  function globalEval(src) { return (0, eval)(src); }
+
   function setChecked(box, want) {
     if (!box) return;
     if (!!box.checked !== !!want) box.click();
@@ -199,19 +214,53 @@
     return out;
   }
 
-  async function inventorySearch(codes) {
+  function rowOf(code) {
+    var rows = inventoryRows();
+    for (var i = 0; i < rows.length; i++) if (rows[i].code === code) return rows[i];
+    return null;
+  }
+
+  // Ô "Mã bưu gửi" của 6.2 nhận từng mã. Không bấm Enter (Enter submit form GET làm tải lại cả trang, mất bảng).
+  // Dùng chế độ quét mã của chính trang: SearchInventory_V2(true) gọi ajax ListInventory_V2 và CỘNG DỒN dòng vào bảng.
+  // Chờ bảng hiện dòng của mã đó rồi mới gõ mã tiếp theo.
+  async function enterCode(code) {
     var input = byId('txtLadingCode');
     if (!input) throw new Error('Không thấy ô Mã bưu gửi (#txtLadingCode): tab chưa ở màn hình 6.2');
-    input.value = codes.join(CONFIG.separator);
+    if (typeof g.SearchInventory_V2 !== 'function') throw new Error('Trang 6.2 không có hàm SearchInventory_V2');
+    input.value = code;
     $(input).trigger('input').trigger('change');
-    var found = await captureAjax('ListInventory_V2', function () {
-      if (typeof g.SearchInventory_V2 === 'function') g.SearchInventory_V2(false);
-      else byId('search_key').click();
-    });
-    if (found.status !== 200) throw new Error('Tìm kiếm ở 6.2 lỗi (HTTP ' + found.status + ')');
+    var resp = await captureAjax('ListInventory_V2', function () { g.SearchInventory_V2(true); });
+    if (resp.status !== 200) throw new Error('Tìm kiếm ở 6.2 lỗi (HTTP ' + resp.status + ')');
     await waitAjaxIdle();
     assertSession();
-    return inventoryRows();
+    return rowOf(code);
+  }
+
+  // Nhập lần lượt từng mã rồi đọc bảng. rows.lost = số mã đã hiện dòng lúc nhập nhưng không còn trong bảng
+  // sau khi nhập hết (bảng không giữ lại dòng cũ).
+  async function inventorySearch(codes) {
+    assertSession();
+    // Xóa dòng cũ (chỉ hiển thị) để mỗi lượt nhập bắt đầu từ bảng trống và lấy trạng thái mới nhất.
+    try { globalEval('_tableSource.clear().draw()'); } catch (e) {
+      try { $('#tbl_inventory').DataTable().clear().draw(); } catch (e2) { /* bảng chưa khởi tạo */ }
+    }
+    var shown = 0;
+    for (var i = 0; i < codes.length; i++) {
+      if (await enterCode(codes[i])) shown++;
+    }
+    var rows = inventoryRows();
+    rows.lost = Math.max(0, shown - countMatched(rows, codes));
+    return rows;
+  }
+
+  function countMatched(rows, codes) {
+    var want = {};
+    codes.forEach(function (c) { want[c] = true; });
+    return rows.filter(function (r) { return want[r.code]; }).length;
+  }
+
+  function lostFatal(rows) {
+    return { fatal: { code: 'E99_LOI_KET_NOI', message: 'Bảng 6.2 không giữ lại các mã đã nhập (mất ' + rows.lost + ' dòng sau khi gõ hết). Đã dừng, chưa thao tác gì.' } };
   }
 
   function selectInventoryRows(wanted, all) {
@@ -233,10 +282,11 @@
 
   // ---------- Bước 1: Vu hồi ----------
 
-  async function step1(codes) {
+  async function step1One(codes) {
     assertSession();
     var per = {};
     var rows = await inventorySearch(codes);
+    if (rows.lost) return lostFatal(rows);
     var by = indexByCode(rows);
     var wanted = [];
     codes.forEach(function (c) {
@@ -258,27 +308,25 @@
     var confirmBtn = modal.querySelector('.confirm');
     if (!confirmBtn) throw new Error('Popup vu hồi không có nút Đồng ý (.confirm)');
     var resp = await captureAjax('Inventory/Recovered', function () { wrote = true; confirmBtn.click(); });
-    var serverMsg = resp.json && resp.json.Message ? String(resp.json.Message) : '';
-    await waitAjaxIdle();
-    hideModals();
-
-    // Đối chiếu từng BG: sau khi vu hồi, BG phải có StatusCode = 'R'.
-    var after = indexByCode(await inventorySearch(wanted.map(function (r) { return r.code; })));
+    var j1 = resp.json || {};
+    var msg1 = j1.Message ? String(j1.Message) : '';
+    await waitAjaxIdle(); // không nhập lại mã để đối chiếu: kết thúc bước thì sang module mới
+    var r1 = parseRatio(msg1);
     wanted.forEach(function (r) {
-      var a = after[r.code];
-      if (a && a.status === 'R') per[r.code] = { ok: true, message: serverMsg };
-      else if (!a || a.status === '') per[r.code] = { ok: false, unknown: true, code: 'E98_KET_QUA_KHONG_RO', message: 'Không đọc lại được trạng thái bưu gửi sau khi vu hồi. Hãy kiểm tra thủ công.' };
-      else per[r.code] = { ok: false, code: 'E41_VU_HOI_THAT_BAI', message: serverMsg || 'Hệ thống không vu hồi được bưu gửi này.' };
+      if (String(j1.Code) !== '00') per[r.code] = { ok: false, code: 'E41_VU_HOI_THAT_BAI', message: msg1 || 'Hệ thống không vu hồi được bưu gửi này.' };
+      else if (!r1 || (r1.ok === r1.total && r1.total === wanted.length)) per[r.code] = { ok: true, message: msg1 };
+      else per[r.code] = { ok: false, unknown: true, code: 'E98_KET_QUA_KHONG_RO', message: 'Hệ thống báo "' + msg1 + '" cho lô ' + wanted.length + ' bưu gửi, không rõ bưu gửi nào chưa vu hồi. Hãy kiểm tra thủ công.' };
     });
     return { perCode: per };
   }
 
   // ---------- Bước 2: Giao lại bưu gửi vu hồi ----------
 
-  async function step2(codes) {
+  async function step2One(codes) {
     assertSession();
     var per = {};
     var rows = await inventorySearch(codes);
+    if (rows.lost) return lostFatal(rows);
     var by = indexByCode(rows);
     var wanted = [];
     codes.forEach(function (c) {
@@ -304,15 +352,14 @@
     var go = findButton('Giao lại', modal);
     if (!go) throw new Error('Popup giao lại không có nút "Giao lại"');
     var resp = await captureAjax('Inventory/DivideRecovered', function () { wrote = true; go.click(); });
-    var serverMsg = resp.json && resp.json.Message ? String(resp.json.Message) : '';
-    await waitAjaxIdle();
-    hideModals();
-
-    // BG giao lại thành công sẽ biến mất khỏi bảng 6.2; BG còn lại là chưa giao được.
-    var after = indexByCode(await inventorySearch(wanted.map(function (r) { return r.code; })));
+    var j2 = resp.json || {};
+    var msg2 = j2.Message ? String(j2.Message) : '';
+    await waitAjaxIdle(); // không nhập lại mã để đối chiếu: kết thúc bước thì sang module mới
+    var r2 = parseRatio(msg2);
     wanted.forEach(function (r) {
-      if (after[r.code]) per[r.code] = { ok: false, code: 'E42_GIAO_LAI_THAT_BAI', message: serverMsg || 'Hệ thống không giao lại được bưu gửi này.' };
-      else per[r.code] = { ok: true, message: serverMsg };
+      if (String(j2.Code) !== '00') per[r.code] = { ok: false, code: 'E42_GIAO_LAI_THAT_BAI', message: msg2 || 'Hệ thống không giao lại được bưu gửi này.' };
+      else if (r2 && r2.ok !== r2.total) per[r.code] = { ok: false, unknown: true, code: 'E98_KET_QUA_KHONG_RO', message: 'Hệ thống báo "' + msg2 + '", không rõ bưu gửi nào chưa giao lại. Hãy kiểm tra thủ công.' };
+      else per[r.code] = { ok: true, message: msg2 };
     });
     return { perCode: per };
   }
@@ -320,20 +367,33 @@
   // ---------- Bước 3: Lập bản kê BĐ13 (3.2) ----------
 
   function bd13Links() {
-    // Trả về [{ a, n }] các ô "SL bưu gửi chưa lập BD13" có số > 0.
-    var table = document.querySelector('#contentLading table');
-    if (!table) return { col: -1, links: [] };
-    var heads = Array.prototype.map.call(table.querySelectorAll('thead th, thead td'), function (th) { return th.textContent; });
-    var col = findColumnIndex(heads);
-    if (col === -1) return { col: -1, links: [] };
+    // Trả về { col, links:[{a,n}], diag } các ô "SL bưu gửi chưa lập BD13" có số > 0.
+    // DataTables cuộn có thể tách tiêu đề và thân bảng ra hai <table>, nên gom tiêu đề và dòng từ mọi bảng trong vùng.
+    var root = byId('contentLading') || document;
+    var tables = Array.prototype.slice.call(root.querySelectorAll('table'));
+    var col = -1;
+    var headRowCells = 0;
+    tables.forEach(function (t) {
+      if (col !== -1) return;
+      Array.prototype.forEach.call(t.querySelectorAll('thead tr'), function (tr) {
+        if (col !== -1) return;
+        var heads = Array.prototype.map.call(tr.children, function (th) { return th.textContent; });
+        var i = findColumnIndex(heads);
+        if (i !== -1) { col = i; headRowCells = heads.length; }
+      });
+    });
+    var rows = [];
+    tables.forEach(function (t) { Array.prototype.forEach.call(t.querySelectorAll('tbody tr'), function (tr) { rows.push(tr); }); });
+    var diag = 'bảng=' + tables.length + ', dòng=' + rows.length + ', cột=' + col;
+    if (col === -1) return { col: -1, links: [], diag: diag };
     var links = [];
-    Array.prototype.forEach.call(table.querySelectorAll('tbody tr'), function (tr) {
+    rows.forEach(function (tr) {
       var cell = tr.children[col];
       var a = cell && cell.querySelector('a');
       var n = a ? parseInt(String(a.textContent).replace(/\D/g, ''), 10) : 0;
       if (a && n > 0) links.push({ a: a, n: n });
     });
-    return { col: col, links: links };
+    return { col: col, links: links, diag: diag };
   }
 
   async function bd13Search() {
@@ -346,12 +406,13 @@
     return bd13Links();
   }
 
-  async function step3(codes) {
+  async function step3(codes, opts) {
+    var resumed = !!(opts && opts.resumed);
     assertSession();
     var route = byId('Route');
     if (!route) throw new Error('Không thấy ô Tuyến phát (#Route): tab chưa ở màn hình 3.2');
-    var opts = Array.prototype.map.call(route.options, function (o) { return { value: o.value, text: o.text }; });
-    var hits = pickRouteOption(opts);
+    var routeOpts = Array.prototype.map.call(route.options, function (o) { return { value: o.value, text: o.text }; });
+    var hits = pickRouteOption(routeOpts);
     if (hits.length !== 1) {
       return { fatal: { code: 'E43_KHONG_THAY_TUYEN_CT', message: hits.length ? 'Có ' + hits.length + ' tuyến chứa chữ "Chuyển tiếp", cần đúng 1 tuyến.' : 'Danh sách Tuyến phát không có tuyến "Chuyển tiếp".' } };
     }
@@ -363,68 +424,88 @@
 
     var expected = {};
     codes.forEach(function (c) { expected[c] = true; });
-    var created = {};
-    var per = {};
     var info = await bd13Search();
     if (info.col === -1) return { fatal: { code: 'E43_SAI_LECH_SO_LUONG', message: 'Không tìm thấy cột "SL bưu gửi chưa lập BD13" ở 3.2.' } };
     var shown = info.links.reduce(function (s, l) { return s + l.n; }, 0);
-    if (shown !== codes.length) {
-      return { fatal: { code: 'E43_SAI_LECH_SO_LUONG', message: 'Màn 3.2 hiển thị ' + shown + ' bưu gửi chưa lập BĐ13, trong khi vừa giao lại thành công ' + codes.length + '. Đã dừng, chưa lập bản kê nào.' } };
+    // Làm tiếp lượt dở: một số BG đã lập BĐ13 từ trước nên số "chưa lập" có thể nhỏ hơn số BG trong file.
+    // BG lạ (ngoài file) vẫn bị chặn ở bước kiểm tra danh sách trong popup bên dưới.
+    var countOk = resumed ? shown <= codes.length : shown === codes.length;
+    if (!countOk) {
+      return { fatal: { code: 'E43_SAI_LECH_SO_LUONG', message: 'Màn 3.2 hiển thị ' + shown + ' bưu gửi chưa lập BĐ13, trong khi vừa giao lại thành công ' + codes.length + '. Đã dừng, chưa lập bản kê nào. (' + info.diag + ')' } };
     }
 
-    for (var guard = 0; guard < 30 && info.links.length; guard++) {
-      info.links[0].a.click();
-      var modal = await waitFor(function () { return visibleModal('modal_lading_divided_detail'); }, CONFIG.uiTimeoutMs, 'danh sách bưu gửi của tuyến');
-      await waitAjaxIdle();
-      var modalCodes = [];
-      Array.prototype.forEach.call(modal.querySelectorAll('tbody tr'), function (tr) { var c = extractCode(tr.textContent); if (c) modalCodes.push(c); });
-      var foreign = modalCodes.filter(function (c) { return !expected[c]; });
-      if (modalCodes.length !== info.links[0].n && !foreign.length) {
-        hideModals();
-        return { perCode: per, fatal: { code: 'E43_SAI_LECH_SO_LUONG', message: 'Danh sách bưu gửi ở 3.2 có ' + modalCodes.length + ' dòng nhưng ô số lượng ghi ' + info.links[0].n + '. Đã dừng, chưa lập bản kê cho nhóm này.' } };
-      }
-      if (foreign.length || !modalCodes.length) {
-        hideModals();
-        return Object.assign({ perCode: per }, { fatal: { code: 'E43_SAI_LECH_SO_LUONG', message: foreign.length ? 'Danh sách bưu gửi ở 3.2 có ' + foreign.length + ' bưu gửi ngoài danh sách đang xử lý (ví dụ ' + foreign[0] + '). Đã dừng, chưa lập bản kê cho nhóm này.' : 'Không đọc được mã bưu gửi trong danh sách ở 3.2.' } });
-      }
-      setChecked(byId('chkAllDetail'), true);
-      var create = byId('btnCreateBD13') || modal.querySelector('[onclick*="CreateBd13"]') || findButton('Lập bản kê BD13', modal) || findButton('Lập bản kê BĐ13', modal);
-      if (!create) throw new Error('Không thấy nút "Lập bản kê BĐ13" trong danh sách bưu gửi');
-      create.click();
-      var confirmBtn = await waitFor(function () {
-        var btns = document.querySelectorAll('.modal button');
-        for (var i = 0; i < btns.length; i++) if (visible(btns[i]) && plain(btns[i].textContent) === 'dong y') return btns[i];
-        return null;
-      }, CONFIG.uiTimeoutMs, 'popup xác nhận lập bản kê');
-      var resp = await captureAjax('CreateBD13Multi', function () { wrote = true; confirmBtn.click(); });
-      var okServer = resp.json && String(resp.json.Code) === '00';
-      var serverMsg = resp.json && resp.json.Message ? String(resp.json.Message) : '';
-      // Popup in BĐ13: bản kê đã lập, chỉ đóng popup (không in).
-      await sleep(600);
-      hideModals();
-      await sleep(CONFIG.settleMs);
-      modalCodes.forEach(function (c) {
-        created[c] = true;
-        per[c] = okServer ? { ok: true, message: serverMsg } : { ok: false, code: 'E43_LAP_BD13_THAT_BAI', message: serverMsg || 'Hệ thống không lập được bản kê BĐ13.' };
+    // Mỗi lần gọi chỉ lập một nhóm (một dòng tuyến/bưu tá). Sau khi lập, trang hiện popup "Xác nhận dịch vụ in BD13":
+    // KHÔNG bấm Hủy/F5 (Hủy làm trang tải lại và cắt ngang kết quả), chỉ chờ rồi trả kết quả.
+    // Nếu còn nhóm khác thì trả again:true để bộ điều phối gọi lại sau khi tab được tải lại.
+    var link = info.links[0];
+    if (!link) {
+      var none = {};
+      codes.forEach(function (c) {
+        none[c] = resumed
+          ? { ok: true, message: 'Không còn trong danh sách chưa lập BĐ13 (coi là đã lập từ lượt trước).' }
+          : { ok: false, code: 'E43_LAP_BD13_THAT_BAI', message: 'Bưu gửi không có trong danh sách chưa lập BĐ13 ở 3.2.' };
       });
-      if (!okServer) break;
-      var remaining = shown - Object.keys(created).length;
-      info = await bd13Search();
-      var left = info.links.reduce(function (n, l) { return n + l.n; }, 0);
-      if (left !== remaining) {
-        return { perCode: per, fatal: { code: 'E43_SAI_LECH_SO_LUONG', message: 'Sau khi lập BĐ13, màn 3.2 còn ' + left + ' bưu gửi chưa lập (kỳ vọng ' + remaining + '). Đã dừng, hãy kiểm tra thủ công.' } };
-      }
+      return { perCode: none };
     }
+    link.a.click();
+    var modal = await waitFor(function () { return visibleModal('modal_lading_divided_detail'); }, CONFIG.uiTimeoutMs, 'danh sách bưu gửi của tuyến');
+    await waitAjaxIdle();
+    var modalCodes = [];
+    Array.prototype.forEach.call(modal.querySelectorAll('tbody tr'), function (tr) { var c = extractCode(tr.textContent); if (c) modalCodes.push(c); });
+    var foreign = modalCodes.filter(function (c) { return !expected[c]; });
+    if (foreign.length || !modalCodes.length) {
+      return { fatal: { code: 'E43_SAI_LECH_SO_LUONG', message: foreign.length ? 'Danh sách bưu gửi ở 3.2 có ' + foreign.length + ' bưu gửi ngoài danh sách đang xử lý (ví dụ ' + foreign[0] + '). Đã dừng, chưa lập bản kê cho nhóm này.' : 'Không đọc được mã bưu gửi trong danh sách ở 3.2.' } };
+    }
+    if (modalCodes.length !== link.n) {
+      return { fatal: { code: 'E43_SAI_LECH_SO_LUONG', message: 'Danh sách bưu gửi ở 3.2 có ' + modalCodes.length + ' dòng nhưng ô số lượng ghi ' + link.n + '. Đã dừng, chưa lập bản kê cho nhóm này.' } };
+    }
+    // Tích chọn tất cả trong popup: ưu tiên ô tiêu đề đang hiển thị trong popup (id #chkAllDetail của audit
+    // có thể trùng/không đúng ô thật), sau đó kiểm tra số dòng đã tích; thiếu thì tích từng dòng.
+    var headBox = Array.prototype.filter.call(modal.querySelectorAll('thead input[type="checkbox"]'), visible)[0] || byId('chkAllDetail');
+    setChecked(headBox, true);
+    await sleep(CONFIG.settleMs);
+    var rowBoxes = Array.prototype.filter.call(modal.querySelectorAll('tbody input[type="checkbox"]'), visible);
+    if (rowBoxes.some(function (b) { return !b.checked; })) rowBoxes.forEach(function (b) { setChecked(b, true); });
+    var ticked = rowBoxes.filter(function (b) { return b.checked; }).length;
+    if (!rowBoxes.length || ticked !== modalCodes.length) {
+      return { fatal: { code: 'E43_SAI_LECH_SO_LUONG', message: 'Không tích chọn đủ bưu gửi trong danh sách ở 3.2 (tích ' + ticked + '/' + modalCodes.length + '). Đã dừng, chưa lập bản kê cho nhóm này.' } };
+    }
+    var create = byId('btnCreateBD13') || modal.querySelector('[onclick*="CreateBd13"]') || findButton('Lập bản kê BD13', modal) || findButton('Lập bản kê BĐ13', modal);
+    if (!create) throw new Error('Không thấy nút "Lập bản kê BĐ13" trong danh sách bưu gửi');
+    // Bấm "Lập bản kê BĐ13" là hệ thống lập ngay; popup "Xác nhận dịch vụ in BD13" chỉ hỏi in. Không chờ phản hồi ajax:
+    // chờ ~3 giây rồi coi là xong (trừ khi trang báo cảnh báo chưa chọn dữ liệu), cầu nối sẽ tải lại tab (F5).
+    wrote = true;
+    create.click();
+    await sleep(3000);
+    var warnText = '';
+    Array.prototype.forEach.call(document.querySelectorAll('.modal'), function (m) {
+      // Chỉ hộp cảnh báo ngắn "Hãy chọn dữ liệu..."; bỏ qua popup danh sách bưu gửi (có bảng, chứa rất nhiều chữ) và popup in.
+      if (!visible(m) || m.id === 'modal_lading_divided_detail' || m.querySelector('table')) return;
+      var t = plain(m.textContent);
+      if (t.length < 400 && t.indexOf('hay chon du lieu') !== -1) warnText = m.textContent.replace(/\s+/g, ' ').trim().slice(0, 200);
+    });
+    var resp = warnText
+      ? { status: 200, json: { Code: '99', Message: 'Trang báo: ' + warnText } }
+      : { status: 200, json: { Code: '00', Message: 'Đã bấm Lập bản kê BĐ13, không có cảnh báo.' } };
+    var okServer = resp.json && String(resp.json.Code) === '00';
+    var serverMsg = resp.json && resp.json.Message ? String(resp.json.Message) : '';
 
+    var per = {};
+    modalCodes.forEach(function (c) {
+      per[c] = okServer ? { ok: true, message: serverMsg } : { ok: false, code: 'E43_LAP_BD13_THAT_BAI', message: serverMsg || 'Hệ thống không lập được bản kê BĐ13.' };
+    });
+    var more = info.links.length > 1;
+    if (okServer && more) return { perCode: per, again: true };
     codes.forEach(function (c) {
-      if (!per[c]) per[c] = { ok: false, code: 'E43_LAP_BD13_THAT_BAI', message: 'Bưu gửi chưa được lập bản kê BĐ13.' };
+      if (per[c]) return;
+      per[c] = (okServer && resumed)
+        ? { ok: true, message: 'Không còn trong danh sách chưa lập BĐ13 (coi là đã lập từ lượt trước).' }
+        : { ok: false, code: 'E43_LAP_BD13_THAT_BAI', message: okServer ? 'Bưu gửi không nằm trong danh sách chưa lập BĐ13 ở 3.2.' : 'Chưa lập vì nhóm trước bị lỗi.' };
     });
     return { perCode: per };
   }
 
   // ---------- Bước 4: Chuyển về 3.0 (3.8.1) ----------
-
-  function globalEval(src) { return (0, eval)(src); }
 
   async function step4(codes) {
     assertSession();
@@ -495,7 +576,6 @@
     if (!accept) throw new Error('Popup chuyển bưu gửi không có nút xác nhận');
     var res = await captureAjax('AcceptAddBackMailTripMulti', function () { wrote = true; accept.click(); });
     await sleep(CONFIG.settleMs);
-    hideModals();
 
     var j = res.json || {};
     var msg = j.Message ? String(j.Message) : '';
@@ -517,21 +597,26 @@
     return { perCode: per };
   }
 
-  var STEP_FN = { 1: step1, 2: step2, 3: step3, 4: step4 };
+  var STEP_FN = {
+    1: step1One,
+    2: step2One,
+    3: step3,
+    4: step4
+  };
 
-  async function runStep(stepNo, codes) {
+  async function runStep(stepNo, codes, opts) {
     var fn = STEP_FN[stepNo];
     if (!fn) throw new Error('Bước không hợp lệ: ' + stepNo);
     wrote = false;
     try {
       var expectPage = STEP_PAGE[stepNo];
       if (where() !== expectPage) throw new Error('Tab chưa ở đúng màn hình ' + expectPage + ' (đang ở ' + (where() || location.pathname) + ')');
-      return await fn(codes);
+      return await fn(codes, opts);
     } catch (e) {
       if (e && e.sessionExpired) return { sessionExpired: true, message: e.message, wrote: wrote };
       throw e;
     }
   }
 
-  g.VNPXuLy30 = { runStep: runStep, where: where, isLoginPage: isLoginPage, PAGES: PAGES, STEP_PAGE: STEP_PAGE, config: CONFIG };
+  g.VNPXuLy30 = { version: VERSION, runStep: runStep, where: where, isLoginPage: isLoginPage, PAGES: PAGES, STEP_PAGE: STEP_PAGE, config: CONFIG };
 })(typeof self !== 'undefined' ? self : globalThis);

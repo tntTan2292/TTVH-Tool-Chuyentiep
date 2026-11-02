@@ -25,8 +25,15 @@
   var x30WarningBox = document.getElementById('x30WarningBox');
   var x30WarningText = document.getElementById('x30WarningText');
 
+  var x30QuickImportBar = document.getElementById('x30QuickImportBar');
+  var btnX30UsePreviousResult = document.getElementById('btnX30UsePreviousResult');
+  var x30PrevCount = document.getElementById('x30PrevCount');
+  var x30ForceReadyBox = document.getElementById('x30ForceReadyBox');
+  var btnX30ForceAcceptAll = document.getElementById('btnX30ForceAcceptAll');
+
   var x30BatchSize = document.getElementById('x30BatchSize');
   var x30DelayMs = document.getElementById('x30DelayMs');
+  var x30StepMode = document.getElementById('x30StepMode');
   var btnX30CheckPNS = document.getElementById('btnX30CheckPNS');
   var btnX30Start = document.getElementById('btnX30Start');
 
@@ -68,6 +75,7 @@
 
   // --- 3. Module State ---
   var currentInput = null;
+  var lastRawAoa = null;
   var currentController = null;
   var currentFilter = 'all'; // 'all' | 'fail'
   var rowElements = {}; // maBG -> <tr>
@@ -79,13 +87,23 @@
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
-  // --- 4. Tab Switching Logic ---
+  // --- 4. Tab Switching Logic & Check Previous Result ---
+  function updateQuickImportVisibility() {
+    if (window.VNP_lastSuccessfulChuyenTiepCodes && window.VNP_lastSuccessfulChuyenTiepCodes.length > 0) {
+      if (x30QuickImportBar) x30QuickImportBar.classList.remove('hidden');
+      if (x30PrevCount) x30PrevCount.textContent = window.VNP_lastSuccessfulChuyenTiepCodes.length;
+    } else {
+      if (x30QuickImportBar) x30QuickImportBar.classList.add('hidden');
+    }
+  }
+
   function switchTab(targetId) {
     if (targetId === 'panelXuLy30') {
       tabBtnChuyenTiep.classList.remove('active');
       tabBtnXuLy30.classList.add('active');
       panelChuyenTiep.classList.add('hidden');
       panelXuLy30.classList.remove('hidden');
+      updateQuickImportVisibility();
     } else {
       tabBtnXuLy30.classList.remove('active');
       tabBtnChuyenTiep.classList.add('active');
@@ -97,6 +115,28 @@
   if (tabBtnChuyenTiep && tabBtnXuLy30) {
     tabBtnChuyenTiep.addEventListener('click', function () { switchTab('panelChuyenTiep'); });
     tabBtnXuLy30.addEventListener('click', function () { switchTab('panelXuLy30'); });
+  }
+
+  window.addEventListener('vnp:chuyentiep-done', function () {
+    updateQuickImportVisibility();
+  });
+
+  // Nút lấy nhanh kết quả từ Tab 1
+  if (btnX30UsePreviousResult) {
+    btnX30UsePreviousResult.addEventListener('click', function () {
+      var codes = window.VNP_lastSuccessfulChuyenTiepCodes || [];
+      if (!codes.length) return;
+
+      var aoa = [['MA_BG', 'KET_QUA']];
+      codes.forEach(function (c) {
+        aoa.push([c, 'Thành công']);
+      });
+
+      x30FileNameDisplay.textContent = 'KetQua_VuaChuyenTiep.xlsx (Từ Tab 1)';
+      x30FileInfoBar.classList.remove('hidden');
+      lastRawAoa = aoa;
+      processParsedAoa(aoa);
+    });
   }
 
   // --- 5. File Upload & Pre-check ---
@@ -131,7 +171,6 @@
 
   function handleFile(file) {
     if (!file) return;
-    if (window.VNPBusy) { alert('Đang có một lượt xử lý chạy. Hãy chờ xong hoặc dừng trước khi nạp file mới.'); return; }
     x30FileNameDisplay.textContent = file.name;
     x30FileCountDisplay.textContent = 'Đang đọc...';
     x30FileInfoBar.classList.remove('hidden');
@@ -145,6 +184,7 @@
         var ws = wb.Sheets[firstSheetName];
         var aoa = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '' });
 
+        lastRawAoa = aoa;
         processParsedAoa(aoa);
       } catch (err) {
         alert('Lỗi đọc file Excel: ' + (err.message || err));
@@ -166,13 +206,22 @@
 
     x30FileCountDisplay.textContent = parsed.codes.length + ' bưu gửi sẵn sàng';
 
-    // Xử lý Cảnh báo / Lỗi nghiêm trọng
+    // Xử lý Cảnh báo / Lỗi
     if (!parsed.ok) {
       x30WarningBox.classList.remove('hidden');
-      x30WarningText.innerHTML = '<strong>Không thể xử lý:</strong> ' + parsed.fatal.map(escapeHtml).join('<br>');
+      x30WarningText.innerHTML = '<strong>Chưa sẵn sàng:</strong> ' + parsed.fatal.map(escapeHtml).join('<br>');
       btnX30Start.disabled = true;
+
+      // HỖ TRỢ TRƯỜNG HỢP: File có bưu gửi nhưng thiếu/chưa ghi "Thành công" ở cột KET_QUA
+      if (parsed.stats.rows > 0 && parsed.codes.length === 0) {
+        x30ForceReadyBox.classList.remove('hidden');
+      } else {
+        x30ForceReadyBox.classList.add('hidden');
+      }
       return;
     }
+
+    x30ForceReadyBox.classList.add('hidden');
 
     if (parsed.warnings.length > 0) {
       x30WarningBox.classList.remove('hidden');
@@ -183,6 +232,37 @@
 
     btnX30Start.disabled = false;
     btnX30Start.focus();
+  }
+
+  // Nút cứu cánh: Nếu lỡ quên tải file kết quả, cưỡng chế nhận tất cả bưu gửi trong file
+  if (btnX30ForceAcceptAll) {
+    btnX30ForceAcceptAll.addEventListener('click', function () {
+      if (!lastRawAoa || !lastRawAoa.length) return;
+
+      var header = lastRawAoa[0].map(function (h) { return VNPCore.text.key(h); });
+      var iBG = -1;
+      for (var i = 0; i < header.length; i++) {
+        var k = header[i];
+        if (k === 'mabg' || k === 'mavandon' || k === 'mabuugui') { iBG = i; break; }
+      }
+
+      if (iBG === -1) {
+        alert('File không có cột chứa mã bưu gửi (MA_BG hoặc MaVanDon)');
+        return;
+      }
+
+      var forcedAoa = [['MA_BG', 'KET_QUA']];
+      for (var r = 1; r < lastRawAoa.length; r++) {
+        var code = VNPCore.text.toStr(lastRawAoa[r][iBG]).toUpperCase().replace(/\s+/g, '');
+        if (code) {
+          forcedAoa.push([code, 'Thành công']);
+        }
+      }
+
+      console.log('Đã cưỡng chế chuyển thành công cho ' + (forcedAoa.length - 1) + ' bưu gửi');
+      lastRawAoa = forcedAoa;
+      processParsedAoa(forcedAoa);
+    });
   }
 
   // --- 6. PNS Connection Check ---
@@ -210,7 +290,6 @@
   if (btnX30Start) {
     btnX30Start.addEventListener('click', function () {
       if (!currentInput || !currentInput.codes || !currentInput.codes.length) return;
-      if (window.VNPBusy) { alert('Đang có một lượt xử lý chạy (Chuyển tiếp hoặc Xử lý 3.0). Hãy chờ xong rồi thử lại.'); return; }
       x30ConfirmCount.textContent = currentInput.codes.length;
       x30ConfirmModal.classList.add('active');
     });
@@ -230,7 +309,6 @@
   }
 
   function setStepVisual(stepNo, state, statusText) {
-    // state: 'wait' | 'active' | 'done' | 'error'
     var item = x30StepItems[stepNo - 1];
     if (!item) return;
     item.classList.remove('active', 'done', 'error');
@@ -311,8 +389,6 @@
   }
 
   async function startExecution() {
-    if (window.VNPBusy) return;
-    window.VNPBusy = 'xuly30';
     var X = VNPCore.xuly30;
     var batchSize = Number(x30BatchSize.value) || 40;
     var delayMs = Number(x30DelayMs.value) || 1200;
@@ -346,22 +422,11 @@
       batchSize: batchSize,
       stepDelayMs: delayMs,
       onProgressUpdate: function (p) {
-        // Cập nhật Stepper 4 bước
         for (var step = 1; step <= 4; step++) {
           if (step < p.step) {
             setStepVisual(step, 'done', 'Xong');
           } else if (step === p.step) {
-            var sm = p.finished && ctl.getSummary();
-            if (sm && (sm.halted || sm.stopped)) {
-              // Lượt chạy kết thúc sớm: bước dừng hiển thị lỗi, các bước sau để "Chờ", không báo "Xong".
-              var at = sm.halted ? sm.halted.step : p.step;
-              for (var k = 1; k <= 4; k++) {
-                if (k < at) setStepVisual(k, 'done', 'Xong');
-                else if (k === at) setStepVisual(k, 'error', sm.halted ? 'Dừng' : 'Đã dừng');
-                else setStepVisual(k, 'wait', 'Chờ');
-              }
-              break;
-            } else if (p.finished) {
+            if (p.finished) {
               setStepVisual(step, 'done', 'Xong');
             } else {
               var txt = p.batches ? (p.batch + '/' + p.batches) : 'Đang chạy';
@@ -372,7 +437,6 @@
           }
         }
 
-        // Cập nhật Counters
         if (p.counts) {
           x30CntTotal.textContent = p.counts.total;
           x30CntDone.textContent = p.counts.success + p.counts.fail + p.counts.unknown + p.counts.notProcessed;
@@ -413,11 +477,11 @@
     }
 
     try {
-      await ctl.run(currentInput.codes);
+      var range = (x30StepMode && x30StepMode.value || '1-4').split('-');
+      await ctl.run(currentInput.codes, { startStep: Number(range[0]) || 1, endStep: Number(range[1]) || 4 });
     } catch (err) {
       alert('Lỗi ngoài dự kiến: ' + (err.message || err));
     } finally {
-      window.VNPBusy = null;
       btnX30Start.disabled = false;
       btnX30Stop.disabled = true;
       btnX30Stop.textContent = '⏹ Dừng hẳn';
@@ -428,7 +492,7 @@
   function showSummary(summary) {
     var elapsedSec = Math.round((Date.now() - startTimeMs) / 1000);
     x30SummaryHeadline.textContent = 'Thành công ' + summary.success + ' / Tổng ' + summary.total + ' — Thất bại ' + summary.fail + (summary.unknown ? (' — Không rõ ' + summary.unknown) : '');
-    x30SummarySubline.textContent = 'Thời gian xử lý: ' + elapsedSec + 's • ' + (summary.halted ? 'Tiến trình dừng sớm tại bước ' + summary.halted.step : (summary.stopped ? 'Dừng theo yêu cầu người dùng' : 'Hoàn tất trọn vẹn 4 bước'));
+    x30SummarySubline.textContent = 'Thời gian xử lý: ' + elapsedSec + 's • ' + (summary.halted ? 'Tiến trình dừng sớm tại bước ' + summary.halted.step : (summary.stopped ? 'Dừng theo yêu cầu người dùng' : (summary.success === summary.total ? 'Hoàn tất trọn vẹn 4 bước' : 'Đã chạy hết, còn bưu gửi chưa thành công')));
 
     x30FailureListBox.innerHTML = '';
     if (summary.failures && summary.failures.length > 0) {
@@ -465,4 +529,3 @@
   }
 
 })();
-

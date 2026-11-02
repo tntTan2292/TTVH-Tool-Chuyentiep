@@ -1,0 +1,50 @@
+{
+  "manifest_version": 3,
+  "name": "VNPost PNS - Chuyển Tiếp Hàng Loạt",
+  "version": "1.0.0",
+  "description": "Tiện ích tự động nhập chuyển tiếp bưu gửi hàng loạt từ file Excel trên VNPost Pack & Send (Module 3.9).",
+  "minimum_chrome_version": "114",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_title": "Mở Bảng Chuyển Tiếp Hàng Loạt"
+  },
+  "background": {
+    "service_worker": "background/service-worker.js"
+  },
+  "side_panel": {
+    "default_path": "sidepanel/index.html"
+  },
+  "permissions": [
+    "sidePanel",
+    "storage",
+    "scripting",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://packnsend.vnpost.vn/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://packnsend.vnpost.vn/*"
+      ],
+      "js": [
+        "core/errors.js",
+        "core/text-utils.js",
+        "core/provinces.js",
+        "core/validator.js",
+        "core/address-resolver.js",
+        "core/model-builder.js",
+        "core/process-one.js",
+        "page/executor.js",
+        "page/xuly30-page.js"
+      ],
+      "world": "MAIN",
+      "run_at": "document_idle"
+    }
+  ]
+}

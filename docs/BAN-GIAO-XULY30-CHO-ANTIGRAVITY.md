@@ -36,7 +36,7 @@ Gợi ý giao diện: màn hình riêng cho Xử lý 3.0, cảnh báo trước k
 
 ## VIỆC CẦN ANTIGRAVITY KIỂM CHỨNG TRÊN PNS THẬT (tôi chưa xác minh được)
 Dùng 1–2 BG test, người dùng cho phép từng bước. Ghi kết quả vào `docs/audit-xuly30/08-kiem-chung-lop-ma.md`.
-1. **Ký tự ngăn cách nhiều mã ở ô `#txtLadingCode` (6.2)**: mặc định `,` (`VNPXuLy30.config.separator`). Thử 2–3 mã; nếu sai, đổi thành `\n` hoặc khoảng trắng.
+1. **Ô `#txtLadingCode` (6.2) chỉ nhận 1 mã mỗi lần tìm** (PO xác nhận 30/10/2026): bước 1 và 2 đã đổi sang tìm, chọn và thao tác lần lượt từng BG. Kiểm tra tốc độ với lô 30–50 BG.
 2. **Tên trường dữ liệu bảng 6.2**: mã đọc `data.LadingCode` và `data.StatusCode` từ DataTable, nếu thiếu thì lấy mã bằng regex trên dòng. Kiểm tra `StatusCode == 'R'` sau vu hồi có đúng như audit.
 3. **Bước 2**: nút "Giao lại bưu gửi vu hồi", nút "Giao lại" trong modal (tìm theo chữ), radio giữ tuyến.
 4. **Bước 3**: nút xác nhận được tìm là nút tên **"Đồng ý"** trong modal đang hiện; nút lập bản kê là `#btnCreateBD13` hoặc `[onclick*=CreateBd13]`; đóng popup in bằng `.modal('hide')`. Kiểm tra bảng 3.2 có thể có **nhiều dòng (mỗi bưu tá một dòng)**: lõi lập lần lượt từng dòng và dừng nếu tổng ≠ số BG đã giao lại.

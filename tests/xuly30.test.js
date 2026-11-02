@@ -256,3 +256,67 @@ test('sự kiện row phát cho cả BG dừng giữa chừng', async () => {
   await ctl.run(codes(2));
   assert.ok(events.row.some((r) => r.status === 'NOT_PROCESSED'));
 });
+
+test('làm tiếp từ bước 3: bước 1 và 2 không được gọi, BG ghi "Bỏ qua"', async () => {
+  const list = codes(3);
+  const { ctl, calls } = make((n, l) => okAll(l));
+  const s = await ctl.run(list, { startStep: 3 });
+  assert.deepEqual(calls.map((c) => c.n), [3, 4]);
+  assert.equal(s.success, 3);
+  const r = ctl.getResults()[0];
+  assert.deepEqual(Object.values(r.steps), ['SKIP', 'SKIP', 'OK', 'OK']);
+  const aoa = X.buildReportAoa(ctl.getResults());
+  assert.equal(aoa[1][1], 'Bỏ qua');
+});
+
+test('làm tiếp từ bước 2: bước 1 không gọi, bước 2 gọi theo lô', async () => {
+  const { ctl, calls } = make((n, l) => okAll(l), { batchSize: 2 });
+  await ctl.run(codes(3), { startStep: 2 });
+  assert.deepEqual(calls.map((c) => c.n), [2, 2, 3, 4, 4]);
+});
+
+test('chạy riêng một bước: chỉ gọi đúng bước đó, BG xong bước được tính thành công', async () => {
+  const { ctl, calls } = make((n, l) => okAll(l));
+  const s = await ctl.run(codes(3), { startStep: 2, endStep: 2 });
+  assert.deepEqual(calls.map((c) => c.n), [2]);
+  assert.equal(s.success, 3);
+  assert.match(ctl.getResults()[0].message, /bước 2/);
+});
+
+test('chạy riêng bước 1: BG lỗi vẫn ghi lỗi, BG tốt tính thành công', async () => {
+  const list = codes(2);
+  const { ctl, calls } = make((n, l) => {
+    const r = okAll(l);
+    r.perCode[l[1]] = { ok: false, code: 'E41_VU_HOI_THAT_BAI', message: 'x' };
+    return r;
+  });
+  const s = await ctl.run(list, { startStep: 1, endStep: 1 });
+  assert.deepEqual(calls.map((c) => c.n), [1]);
+  assert.equal(s.success, 1);
+  assert.equal(s.fail, 1);
+});
+
+test('làm tiếp từ bước 3 trở đi: driver nhận cờ resumed; chạy mới thì không', async () => {
+  const seen = [];
+  const mk = () => X.createController({ driver: { runStep: async (n, l, o) => { seen.push([n, !!(o && o.resumed)]); return okAll(l); } }, sleep: async () => {} });
+  await mk().run(codes(1), { startStep: 3 });
+  assert.deepEqual(seen, [[3, true], [4, true]]);
+  seen.length = 0;
+  await mk().run(codes(1));
+  assert.ok(seen.every((x) => x[1] === false));
+});
+
+test('bước 3 nhiều nhóm: driver trả again, bộ điều phối gọi lại cho phần còn lại', async () => {
+  const list = codes(4);
+  const calls3 = [];
+  const { ctl } = make((n, l) => {
+    if (n !== 3) return okAll(l);
+    calls3.push(l.slice());
+    if (calls3.length === 1) return { again: true, perCode: Object.fromEntries(l.slice(0, 3).map((c) => [c, { ok: true }])) };
+    return okAll(l);
+  });
+  const s = await ctl.run(list);
+  assert.equal(calls3.length, 2);
+  assert.deepEqual(calls3[1], [list[3]]);
+  assert.equal(s.success, 4);
+});

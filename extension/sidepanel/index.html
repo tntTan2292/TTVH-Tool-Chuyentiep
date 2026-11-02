@@ -211,13 +211,22 @@
       <section class="card" id="x30UploadCard">
         <div class="card-title">
           <span>1. Nạp file bưu gửi cần xử lý 3.0</span>
-          <span class="badge-tag">KQ Chuyển tiếp / File có MA_BG</span>
+          <a href="../assets/mau-import-xuly-30.xlsx" download="mau-import-xuly-30.xlsx" class="template-link" id="downloadTemplate30Link">
+            📥 Tải file mẫu .xlsx
+          </a>
+        </div>
+
+        <!-- Nút tiện ích: Nạp nhanh danh sách thành công từ Tab Chuyển tiếp -->
+        <div class="hidden" id="x30QuickImportBar" style="margin-bottom: 8px;">
+          <button type="button" class="btn btn-accent btn-sm" id="btnX30UsePreviousResult" style="width: 100%; justify-content: center; font-size: 11.5px;">
+            ⚡ Nạp nhanh <span id="x30PrevCount" style="font-weight: 800;">0</span> bưu gửi vừa Chuyển tiếp thành công ở Tab 1
+          </button>
         </div>
 
         <div class="upload-dropzone" id="x30DropZone">
           <div class="upload-icon">📊</div>
           <div class="upload-prompt">Kéo thả file kết quả Chuyển tiếp vào đây</div>
-          <div class="upload-sub">Hệ thống tự động lọc các bưu gửi có kết quả "Thành công"</div>
+          <div class="upload-sub">Hoặc tải file mẫu .xlsx ở trên, dán mã bưu gửi vào và nạp lên</div>
           <input type="file" id="x30FileInput" accept=".xlsx, .xls" class="hidden">
         </div>
 
@@ -246,6 +255,13 @@
           <span>⚠️</span>
           <div id="x30WarningText"></div>
         </div>
+
+        <!-- Nút trợ giúp cưỡng chế coi tất cả bưu gửi là thành công nếu lỡ nạp file chưa có KET_QUA -->
+        <div class="hidden" id="x30ForceReadyBox" style="margin-top: 8px;">
+          <button type="button" class="btn btn-primary btn-sm" id="btnX30ForceAcceptAll" style="width: 100%; justify-content: center;">
+            ✨ Coi toàn bộ bưu gửi trong file này là "Thành công" và tiếp tục
+          </button>
+        </div>
       </section>
 
       <!-- 2. Thẻ Cấu hình & Bắt đầu -->
@@ -259,6 +275,19 @@
             <option value="30">30 bưu gửi/lô</option>
             <option value="40" selected>40 bưu gửi/lô (Khuyên dùng)</option>
             <option value="50">50 bưu gửi/lô (Tối đa)</option>
+          </select>
+        </div>
+
+        <div class="settings-row" style="margin-top: 8px;">
+          <span>Chạy bước:</span>
+          <select id="x30StepMode" class="delay-select">
+            <option value="1-4" selected>Cả 4 bước (từ đầu)</option>
+            <option value="1-1">Chỉ Bước 1: Vu hồi</option>
+            <option value="2-2">Chỉ Bước 2: Giao lại</option>
+            <option value="3-3">Chỉ Bước 3: Lập BĐ13</option>
+            <option value="4-4">Chỉ Bước 4: Chuyển về 3.0</option>
+            <option value="2-4">Từ Bước 2 đến hết</option>
+            <option value="3-4">Từ Bước 3 đến hết</option>
           </select>
         </div>
 

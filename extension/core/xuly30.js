@@ -130,8 +130,9 @@
       // BG còn đi tiếp được đến bước này: chưa lỗi và đã qua bước ngay trước.
       return st.codes.filter(function (c) {
         var r = st.recs[c];
-        if (r.status !== 'PENDING') return false;
-        return step.no === 1 || r.steps[STEPS[step.no - 2].key] === 'OK';
+        if (r.status !== 'PENDING' || r.steps[step.key] === 'OK') return false; // đã xong bước này (lần gọi trước)
+        var prev = step.no === 1 ? 'OK' : r.steps[STEPS[step.no - 2].key];
+        return prev === 'OK' || prev === 'SKIP';
       });
     }
 
@@ -155,7 +156,7 @@
 
     async function callDriver(step, codes) {
       try {
-        return await driver.runStep(step.no, codes);
+        return await driver.runStep(step.no, codes, { resumed: !!st.resumed });
       } catch (e) {
         return { threw: true, message: String((e && e.message) || e) };
       }
@@ -216,13 +217,28 @@
     }
 
     async function runBd13(step) {
-      var codes = alive(step);
-      if (!codes.length) return;
-      progress(step, 0, codes.length);
-      var res = await callDriver(step, codes);
-      if (handleAbort(step, codes, res)) return;
-      if (!res.threw) applyResult(step, codes, res);
-      progress(step, codes.length, codes.length);
+      var total = alive(step).length;
+      var guard = 0;
+      for (;;) {
+        var codes = alive(step);
+        if (!codes.length) return;
+        progress(step, total - codes.length, total);
+        var res = await callDriver(step, codes);
+        if (handleAbort(step, codes, res)) return;
+        if (res.threw) return;
+        if (res.again) {
+          // Còn nhóm khác (ví dụ nhiều bưu tá): chỉ ghi nhận BG đã được nhóm này xử lý, các BG còn lại chờ lần gọi sau.
+          var per = res.perCode || {};
+          var known = codes.filter(function (c) { return per[c]; });
+          applyResult(step, known, res);
+          if (!known.length || ++guard >= 30) return;
+          await sleep(stepDelayMs);
+          continue;
+        }
+        applyResult(step, codes, res);
+        progress(step, total, total);
+        return;
+      }
     }
 
     function finish() {
@@ -258,7 +274,11 @@
     }
 
     // codes: danh sách mã BG đã chuyển tiếp thành công (đã khử trùng, ví dụ từ parseInput).
-    async function run(codes) {
+    // o.startStep (1-4): làm tiếp lượt dở. Các bước trước startStep được coi là đã xong cho mọi BG trong danh sách
+    // (người dùng tự chịu trách nhiệm); riêng bước 2 và 4 vẫn tự kiểm tra trạng thái BG nên BG chưa đủ điều kiện sẽ báo lỗi.
+    async function run(codes, o) {
+      var startStep = Math.min(4, Math.max(1, Number(o && o.startStep) || 1));
+      var endStep = Math.min(4, Math.max(startStep, Number(o && o.endStep) || 4));
       if (st && st.running) throw new Error('Đang có một lượt Xử lý 3.0 chưa kết thúc');
       var uniq = [];
       var seen = {};
@@ -266,14 +286,33 @@
       st = { codes: uniq, recs: {}, running: true, halted: null, stopRequested: false, startedAt: now(), summary: null };
       uniq.forEach(function (c) { st.recs[c] = newRec(c); });
       if (!uniq.length) { return finish(); }
+      st.resumed = startStep >= 3; // làm tiếp từ bước 3 trở đi: một số BG có thể đã lập BĐ13 từ lượt trước
+      uniq.forEach(function (c) { for (var k = 0; k < startStep - 1; k++) st.recs[c].steps[STEPS[k].key] = 'SKIP'; });
 
-      await runBatched(STEPS[0]);
-      if (!st.stopRequested && !st.halted) { await sleep(stepDelayMs); await runBatched(STEPS[1]); }
-      if (!st.stopRequested && !st.halted) { await sleep(stepDelayMs); await runBd13(STEPS[2]); }
-      if (!st.stopRequested && !st.halted) { await sleep(stepDelayMs); await runBatched(STEPS[3]); }
+      var plan = [
+        function () { return runBatched(STEPS[0]); },
+        function () { return runBatched(STEPS[1]); },
+        function () { return runBd13(STEPS[2]); },
+        function () { return runBatched(STEPS[3]); }
+      ];
+      for (var n = startStep; n <= endStep; n++) {
+        if (st.stopRequested || st.halted) break;
+        if (n > startStep) await sleep(stepDelayMs);
+        await plan[n - 1]();
+      }
+      if (endStep < 4 && !st.stopRequested && !st.halted) {
+        // Chạy từng phần: BG qua trọn các bước đã chọn được tính là thành công của lượt này.
+        st.codes.forEach(function (c) {
+          var r = st.recs[c];
+          if (r.status === 'PENDING' && r.steps[STEPS[endStep - 1].key] === 'OK') {
+            r.status = 'SUCCESS'; r.code = 'SUCCESS'; r.message = 'Đã xong đến bước ' + endStep + ' (' + STEPS[endStep - 1].name + '), chạy từng phần.'; r.finishedAt = now();
+            emit('row', r);
+          }
+        });
+      }
 
       var summary = finish();
-      emit('progress', { step: 4, stepName: STEPS[3].name, stepsTotal: STEPS.length, done: summary.total, total: summary.total, counts: counts(), finished: true });
+      emit('progress', { step: endStep, stepName: STEPS[endStep - 1].name, stepsTotal: STEPS.length, done: summary.total, total: summary.total, counts: counts(), finished: true });
       emit('success', summary);
       return summary;
     }

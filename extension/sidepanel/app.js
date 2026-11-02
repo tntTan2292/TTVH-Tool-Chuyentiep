@@ -350,6 +350,18 @@
     btnResume.classList.add('hidden');
     btnStop.disabled = true;
 
+    if (currentMode === 'real' && currentRunner) {
+      var allRes = currentRunner.getResults();
+      var okCodes = [];
+      Object.keys(allRes).forEach(function (k) {
+        if (allRes[k] && allRes[k].status === 'SUCCESS' && allRes[k].maBG) {
+          okCodes.push(allRes[k].maBG);
+        }
+      });
+      window.VNP_lastSuccessfulChuyenTiepCodes = okCodes;
+      window.dispatchEvent(new CustomEvent('vnp:chuyentiep-done', { detail: { codes: okCodes } }));
+    }
+
     showSummaryModal();
   }
 

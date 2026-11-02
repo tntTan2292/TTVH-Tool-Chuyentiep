@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "VNPost PNS - Chuyển Tiếp Hàng Loạt",
-  "version": "0.9.0",
+  "version": "1.0.0",
   "description": "Tiện ích tự động nhập chuyển tiếp bưu gửi hàng loạt từ file Excel trên VNPost Pack & Send (Module 3.9).",
   "minimum_chrome_version": "114",
   "icons": {

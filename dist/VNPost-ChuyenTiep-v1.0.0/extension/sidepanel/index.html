@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VNPost PNS - Chuyển Tiếp & Xử Lý 3.0</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-icon">📮</div>
+      <div class="brand-title">
+        <h1>CHUYỂN TIẾP & XỬ LÝ 3.0</h1>
+        <p>VNPost Pack & Send • Automation <span class="designer-tag">• Designer by TNT</span></p>
+      </div>
+    </div>
+    <div class="badge-dev" id="devModeBadge" title="Đang chạy với bộ giả lập kiểm thử giao diện">GIẢ LẬP (DEV)</div>
+  </header>
+
+  <!-- Navigation Tabs -->
+  <nav class="app-tabs">
+    <button class="tab-btn active" id="tabBtnChuyenTiep" data-target="panelChuyenTiep">
+      <span class="tab-icon">🚚</span>
+      <span class="tab-label">Chuyển tiếp (3.9)</span>
+    </button>
+    <button class="tab-btn" id="tabBtnXuLy30" data-target="panelXuLy30">
+      <span class="tab-icon">⚡</span>
+      <span class="tab-label">Xử lý 3.0</span>
+      <span class="tab-badge" id="tabBadge30">4 bước</span>
+    </button>
+  </nav>
+
+  <!-- Main Scrollable Body -->
+  <main class="app-body">
+
+    <!-- TAB PANEL 1: CHUYỂN TIẾP HÀNG LOẠT (MODULE 3.9) -->
+    <div class="tab-panel active" id="panelChuyenTiep">
+
+      <!-- Cảnh báo phiên / môi trường (nếu có) -->
+      <div class="alert-card alert-warning hidden" id="alertSession">
+        <span>⚠️</span>
+        <div>
+          <strong>Hết phiên đăng nhập!</strong> Hãy mở tab Pack & Send để đăng nhập lại, sau đó bấm <b>Tiếp tục</b>.
+        </div>
+      </div>
+
+      <!-- 1. Thẻ Tải File Excel -->
+      <section class="card" id="uploadCard">
+        <div class="card-title">
+          <span>1. Nạp danh sách bưu gửi</span>
+          <a href="../assets/mau-import-chuyen-tiep.xlsx" download="mau-import-chuyen-tiep.xlsx" class="template-link" id="downloadTemplateLink">
+            📥 Tải file mẫu .xlsx
+          </a>
+        </div>
+
+        <div class="upload-dropzone" id="dropZone">
+          <div class="upload-icon">📄</div>
+          <div class="upload-prompt">Kéo thả file Excel vào đây hoặc click để chọn</div>
+          <div class="upload-sub">Hỗ trợ định dạng .xlsx, .xls (tối đa 500 bưu gửi/lần)</div>
+          <div id="devHint" style="margin-top: 8px; font-size: 11px; color: var(--secondary); font-weight: 700;">
+            ⚡ Hoặc bấm vào nút [GIẢ LẬP (DEV)] ở góc trên để nạp ngay dữ liệu kiểm thử!
+          </div>
+          <input type="file" id="fileInput" accept=".xlsx, .xls" class="hidden">
+        </div>
+
+        <div class="file-info-bar hidden" id="fileInfoBar">
+          <span class="file-name" id="fileNameDisplay">chuyen-tiep.xlsx</span>
+          <span class="file-size" id="fileCountDisplay">0 dòng</span>
+        </div>
+      </section>
+
+      <!-- 2. Thẻ Báo Cáo Kiểm Tra Trước (Pre-check) -->
+      <section class="card hidden" id="precheckCard">
+        <div class="card-title">2. Báo cáo kiểm tra trước (Pre-check)</div>
+        <div class="precheck-stats">
+          <div class="stat-pill pill-total">
+            <span class="num" id="precheckTotal">0</span>
+            <span class="lbl">Tổng đọc được</span>
+          </div>
+          <div class="stat-pill pill-valid">
+            <span class="num" id="precheckValid">0</span>
+            <span class="lbl">Hợp lệ</span>
+          </div>
+          <div class="stat-pill pill-invalid">
+            <span class="num" id="precheckInvalid">0</span>
+            <span class="lbl">Lỗi cú pháp</span>
+          </div>
+        </div>
+
+        <div class="precheck-errors hidden" id="precheckErrorList">
+          <!-- Danh sách dòng lỗi render động -->
+        </div>
+      </section>
+
+      <!-- 3. Thẻ Thiết Lập & Bắt Đầu Chạy -->
+      <section class="card controls-card" id="controlsCard">
+        <div class="card-title">3. Điều khiển thực thi</div>
+
+        <div class="settings-row">
+          <span>Khoảng nghỉ giữa 2 bưu gửi (Delay):</span>
+          <select id="delaySelect" class="delay-select">
+            <option value="500">500 ms (Rất nhanh)</option>
+            <option value="800">800 ms (Nhanh)</option>
+            <option value="1000" selected>1000 ms (Khuyên dùng)</option>
+            <option value="1500">1500 ms (An toàn)</option>
+            <option value="2000">2000 ms (Mạng chậm)</option>
+          </select>
+        </div>
+
+        <div class="action-buttons">
+          <button class="btn btn-accent" id="btnDryRun" disabled>
+            🔍 Chạy thử (không lưu)
+          </button>
+          <button class="btn btn-primary" id="btnRealRun" disabled>
+            🚀 Chạy thật
+          </button>
+        </div>
+      </section>
+
+      <!-- 4. Thẻ Tiến Độ Xử Lý Trực Tiếp (Live Progress) -->
+      <section class="card progress-section hidden" id="progressCard">
+        <div class="card-title">
+          <span id="progressTitle">Tiến độ thực thi</span>
+          <span id="progressPercent" style="color: var(--primary); font-weight: 800;">0%</span>
+        </div>
+
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-fill" id="progressBarFill"></div>
+        </div>
+
+        <div class="counters-grid">
+          <div class="counter-box">
+            <div class="val" id="cntTotal">0</div>
+            <div class="lbl">Tổng</div>
+          </div>
+          <div class="counter-box">
+            <div class="val" id="cntDone">0</div>
+            <div class="lbl">Đã xử lý</div>
+          </div>
+          <div class="counter-box c-ok">
+            <div class="val" id="cntOk">0</div>
+            <div class="lbl">Thành công</div>
+          </div>
+          <div class="counter-box c-fail">
+            <div class="val" id="cntFail">0</div>
+            <div class="lbl">Thất bại</div>
+          </div>
+          <div class="counter-box c-pending">
+            <div class="val" id="cntPending">0</div>
+            <div class="lbl">Chưa xong</div>
+          </div>
+        </div>
+
+        <div class="running-actions">
+          <button class="btn btn-outline btn-sm" id="btnPause" style="flex: 1;">⏸ Tạm dừng</button>
+          <button class="btn btn-primary btn-sm hidden" id="btnResume" style="flex: 1;">▶ Tiếp tục</button>
+          <button class="btn btn-danger btn-sm" id="btnStop" style="flex: 1;">⏹ Dừng hẳn</button>
+        </div>
+      </section>
+
+      <!-- 5. Thẻ Bảng Nhật Ký Thời Gian Thực (Log Table) -->
+      <section class="card log-card" id="logCard">
+        <div class="table-toolbar">
+          <div class="card-title" style="margin-bottom:0;">Nhật ký bưu gửi</div>
+          <div class="filter-pills">
+            <button class="filter-btn active" id="filterAll">Tất cả</button>
+            <button class="filter-btn" id="filterFailOnly">Chỉ xem lỗi</button>
+          </div>
+        </div>
+
+        <div class="table-scroll" id="logTableScroll">
+          <table class="log-table" id="logTable">
+            <thead>
+              <tr>
+                <th style="width: 32px;">#</th>
+                <th style="width: 105px;">Mã vận đơn</th>
+                <th style="width: 85px;">Kết quả</th>
+                <th>Chi tiết / Nguyên nhân</th>
+              </tr>
+            </thead>
+            <tbody id="logTableBody">
+              <tr id="emptyLogRow">
+                <td colspan="4" class="text-center" style="padding: 24px; color: var(--text-muted);">
+                  Chưa có dữ liệu xử lý. Vui lòng nạp file Excel để bắt đầu.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div><!-- /#panelChuyenTiep -->
+
+    <!-- TAB PANEL 2: XỬ LÝ 3.0 (4 BƯỚC LIÊN HOÀN) -->
+    <div class="tab-panel hidden" id="panelXuLy30">
+
+      <!-- Cảnh báo quan trọng: Thao tác ghi thật -->
+      <div class="alert-card alert-danger" style="margin-bottom: 0;">
+        <span>🛑</span>
+        <div>
+          <strong>LƯU Ý QUAN TRỌNG:</strong> Tính năng này thực hiện ghi dữ liệu thật qua 4 bước: 
+          <b>Vu hồi (6.2) ➔ Giao lại (6.2) ➔ Lập BĐ13 (3.2) ➔ Chuyển về 3.0 (3.8.1)</b>.
+          Thao tác <strong>KHÔNG THỂ HOÀN TÁC</strong> và không có chế độ chạy thử!
+        </div>
+      </div>
+
+      <!-- 1. Thẻ Nạp File Bưu Gửi 3.0 -->
+      <section class="card" id="x30UploadCard">
+        <div class="card-title">
+          <span>1. Nạp file bưu gửi cần xử lý 3.0</span>
+          <a href="../assets/mau-import-xuly-30.xlsx" download="mau-import-xuly-30.xlsx" class="template-link" id="downloadTemplate30Link">
+            📥 Tải file mẫu .xlsx
+          </a>
+        </div>
+
+        <!-- Nút tiện ích: Nạp nhanh danh sách thành công từ Tab Chuyển tiếp -->
+        <div class="hidden" id="x30QuickImportBar" style="margin-bottom: 8px;">
+          <button type="button" class="btn btn-accent btn-sm" id="btnX30UsePreviousResult" style="width: 100%; justify-content: center; font-size: 11.5px;">
+            ⚡ Nạp nhanh <span id="x30PrevCount" style="font-weight: 800;">0</span> bưu gửi vừa Chuyển tiếp thành công ở Tab 1
+          </button>
+        </div>
+
+        <div class="upload-dropzone" id="x30DropZone">
+          <div class="upload-icon">📊</div>
+          <div class="upload-prompt">Kéo thả file kết quả Chuyển tiếp vào đây</div>
+          <div class="upload-sub">Hoặc tải file mẫu .xlsx ở trên, dán mã bưu gửi vào và nạp lên</div>
+          <input type="file" id="x30FileInput" accept=".xlsx, .xls" class="hidden">
+        </div>
+
+        <div class="file-info-bar hidden" id="x30FileInfoBar">
+          <span class="file-name" id="x30FileNameDisplay">KetQua_ChuyenTiep.xlsx</span>
+          <span class="file-size" id="x30FileCountDisplay">0 bưu gửi</span>
+        </div>
+
+        <!-- Thống kê lọc dữ liệu đầu vào -->
+        <div class="precheck-stats hidden" id="x30InputStats" style="margin-top: 10px;">
+          <div class="stat-pill pill-total">
+            <span class="num" id="x30StatTotal">0</span>
+            <span class="lbl">Tổng dòng</span>
+          </div>
+          <div class="stat-pill pill-valid">
+            <span class="num" id="x30StatReady">0</span>
+            <span class="lbl">Sẵn sàng</span>
+          </div>
+          <div class="stat-pill pill-invalid">
+            <span class="num" id="x30StatSkipped">0</span>
+            <span class="lbl">Bỏ qua</span>
+          </div>
+        </div>
+
+        <div class="alert-card alert-warning hidden" id="x30WarningBox" style="margin-top: 10px;">
+          <span>⚠️</span>
+          <div id="x30WarningText"></div>
+        </div>
+
+        <!-- Nút trợ giúp cưỡng chế coi tất cả bưu gửi là thành công nếu lỡ nạp file chưa có KET_QUA -->
+        <div class="hidden" id="x30ForceReadyBox" style="margin-top: 8px;">
+          <button type="button" class="btn btn-primary btn-sm" id="btnX30ForceAcceptAll" style="width: 100%; justify-content: center;">
+            ✨ Coi toàn bộ bưu gửi trong file này là "Thành công" và tiếp tục
+          </button>
+        </div>
+      </section>
+
+      <!-- 2. Thẻ Cấu hình & Bắt đầu -->
+      <section class="card controls-card" id="x30ControlsCard">
+        <div class="card-title">2. Điều khiển thực thi</div>
+
+        <div class="settings-row">
+          <span>Kích thước mỗi lô (Batch size):</span>
+          <select id="x30BatchSize" class="delay-select">
+            <option value="20">20 bưu gửi/lô</option>
+            <option value="30">30 bưu gửi/lô</option>
+            <option value="40" selected>40 bưu gửi/lô (Khuyên dùng)</option>
+            <option value="50">50 bưu gửi/lô (Tối đa)</option>
+          </select>
+        </div>
+
+        <div class="settings-row" style="margin-top: 8px;">
+          <span>Chạy bước:</span>
+          <select id="x30StepMode" class="delay-select">
+            <option value="1-4" selected>Cả 4 bước (từ đầu)</option>
+            <option value="1-1">Chỉ Bước 1: Vu hồi</option>
+            <option value="2-2">Chỉ Bước 2: Giao lại</option>
+            <option value="3-3">Chỉ Bước 3: Lập BĐ13</option>
+            <option value="4-4">Chỉ Bước 4: Chuyển về 3.0</option>
+            <option value="2-4">Từ Bước 2 đến hết</option>
+            <option value="3-4">Từ Bước 3 đến hết</option>
+          </select>
+        </div>
+
+        <div class="settings-row" style="margin-top: 8px;">
+          <span>Khoảng nghỉ giữa các bước:</span>
+          <select id="x30DelayMs" class="delay-select">
+            <option value="800">800 ms</option>
+            <option value="1200" selected>1200 ms (Chuẩn)</option>
+            <option value="1500">1500 ms (An toàn)</option>
+          </select>
+        </div>
+
+        <div class="action-buttons" style="margin-top: 12px;">
+          <button class="btn btn-outline" id="btnX30CheckPNS" style="flex: 1;" title="Kiểm tra tab Pack & Send đang mở và đã đăng nhập chưa">
+            🔍 Kiểm tra PNS
+          </button>
+          <button class="btn btn-danger" id="btnX30Start" disabled style="flex: 2;">
+            ⚡ Bắt đầu Xử lý 3.0
+          </button>
+        </div>
+      </section>
+
+      <!-- 3. Thẻ Tiến độ 4 bước thời gian thực -->
+      <section class="card progress-section hidden" id="x30ProgressCard">
+        <div class="card-title">
+          <span id="x30ProgressTitle">Tiến độ Xử lý 3.0</span>
+          <span id="x30ProgressPercent" style="color: var(--primary); font-weight: 800;">0%</span>
+        </div>
+
+        <!-- 4-Step Stepper -->
+        <div class="stepper-wrap" id="x30Stepper">
+          <div class="step-item" id="x30StepItem1">
+            <div class="step-num">1</div>
+            <div class="step-name">Vu hồi (6.2)</div>
+            <div class="step-status">Chờ</div>
+          </div>
+          <div class="step-item" id="x30StepItem2">
+            <div class="step-num">2</div>
+            <div class="step-name">Giao lại (6.2)</div>
+            <div class="step-status">Chờ</div>
+          </div>
+          <div class="step-item" id="x30StepItem3">
+            <div class="step-num">3</div>
+            <div class="step-name">BĐ13 (3.2)</div>
+            <div class="step-status">Chờ</div>
+          </div>
+          <div class="step-item" id="x30StepItem4">
+            <div class="step-num">4</div>
+            <div class="step-name">Về 3.0 (3.8.1)</div>
+            <div class="step-status">Chờ</div>
+          </div>
+        </div>
+
+        <div class="progress-bar-wrap" style="margin-top: 12px;">
+          <div class="progress-bar-fill" id="x30ProgressBarFill"></div>
+        </div>
+
+        <div class="counters-grid" style="margin-top: 10px;">
+          <div class="counter-box">
+            <div class="val" id="x30CntTotal">0</div>
+            <div class="lbl">Tổng</div>
+          </div>
+          <div class="counter-box">
+            <div class="val" id="x30CntDone">0</div>
+            <div class="lbl">Đã xong</div>
+          </div>
+          <div class="counter-box c-ok">
+            <div class="val" id="x30CntOk">0</div>
+            <div class="lbl">Thành công</div>
+          </div>
+          <div class="counter-box c-fail">
+            <div class="val" id="x30CntFail">0</div>
+            <div class="lbl">Thất bại</div>
+          </div>
+          <div class="counter-box c-pending">
+            <div class="val" id="x30CntUnknown" title="Cần kiểm tra thủ công">0</div>
+            <div class="lbl">Không rõ</div>
+          </div>
+        </div>
+
+        <div class="running-actions" style="margin-top: 10px;">
+          <button class="btn btn-danger btn-sm" id="btnX30Stop" style="flex: 1;">⏹ Dừng hẳn</button>
+        </div>
+      </section>
+
+      <!-- 4. Thẻ Nhật ký bưu gửi Xử lý 3.0 -->
+      <section class="card log-card" id="x30LogCard">
+        <div class="table-toolbar">
+          <div class="card-title" style="margin-bottom:0;">Nhật ký Xử lý 3.0</div>
+          <div class="filter-pills">
+            <button class="filter-btn active" id="x30FilterAll">Tất cả</button>
+            <button class="filter-btn" id="x30FilterFailOnly">Chỉ lỗi / Cần kiểm tra</button>
+          </div>
+        </div>
+
+        <div class="table-scroll" id="x30LogTableScroll">
+          <table class="log-table" id="x30LogTable">
+            <thead>
+              <tr>
+                <th style="width: 28px;">#</th>
+                <th style="width: 105px;">Mã vận đơn</th>
+                <th style="width: 44px; text-align: center;" title="Bước 1: Vu hồi (6.2)">Vu hồi</th>
+                <th style="width: 44px; text-align: center;" title="Bước 2: Giao lại vu hồi (6.2)">Giao lại</th>
+                <th style="width: 44px; text-align: center;" title="Bước 3: Lập BĐ13 (3.2)">BĐ13</th>
+                <th style="width: 44px; text-align: center;" title="Bước 4: Chuyển về 3.0 (3.8.1)">Về 3.0</th>
+                <th style="width: 80px;">Kết quả</th>
+                <th>Chi tiết / Ghi chú</th>
+              </tr>
+            </thead>
+            <tbody id="x30LogTableBody">
+              <tr id="x30EmptyLogRow">
+                <td colspan="8" class="text-center" style="padding: 24px; color: var(--text-muted);">
+                  Chưa có dữ liệu xử lý 3.0. Vui lòng nạp file để bắt đầu.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div><!-- /#panelXuLy30 -->
+
+  </main>
+
+  <!-- App Footer -->
+  <footer class="app-footer">
+    <div class="footer-content">
+      <span>VNPost Pack & Send Automation</span>
+      <span class="designer-badge">⚡ Designer by TNT</span>
+    </div>
+  </footer>
+
+  <!-- ==================== CÁC MODAL DIALOGS MODULE 3.9 ==================== -->
+
+  <!-- Modal 1: Xác Nhận Chạy Thật (3.9) -->
+  <div class="modal-overlay" id="confirmModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3>⚠️ Xác nhận chuyển tiếp thật</h3>
+      </div>
+      <div class="modal-body">
+        <p style="margin-bottom: 8px;">
+          Bạn chuẩn bị thực hiện chuyển tiếp cho <strong id="confirmCount" style="color: var(--primary);">0</strong> bưu gửi hợp lệ.
+        </p>
+        <div class="alert-card alert-danger" style="margin-bottom: 0;">
+          <span>🛑</span>
+          <div>
+            <strong>LƯU Ý QUAN TRỌNG:</strong> Thao tác này sẽ ghi trực tiếp vào hệ thống cơ sở dữ liệu của VNPost và <strong>KHÔNG THỂ HOÀN TÁC</strong>!
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" id="btnCancelConfirm">Hủy bỏ</button>
+        <button class="btn btn-danger" id="btnAcceptConfirm">Đồng ý & Bắt đầu</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Popup Tổng Kết Hoàn Tất (3.9) -->
+  <div class="modal-overlay" id="summaryModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="summaryTitle">🎉 Hoàn tất quá trình xử lý</h3>
+      </div>
+      <div class="modal-body">
+        <div class="summary-banner" id="summaryBanner">
+          <div class="summary-headline" id="summaryHeadline">Thành công 0 / Tổng 0 — Thất bại 0</div>
+          <div style="font-size: 11px; color: var(--text-muted);" id="summarySubline">Chế độ chạy thật • Thời gian: 0s</div>
+        </div>
+
+        <div style="font-weight: 700; font-size: 12px; margin-bottom: 6px;" id="failureSectionTitle">
+          Danh sách bưu gửi thất bại:
+        </div>
+        <div class="failure-list-box" id="failureListBox"></div>
+
+        <div style="margin-top: 10px; font-size: 11.5px; color: var(--text-muted);" id="summaryStatsByCode"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" id="btnCloseSummary">Đóng</button>
+        <button class="btn btn-primary" id="btnExportResult">
+          📥 Tải file kết quả (.xlsx)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 3: Cảnh báo Ngắt Mạch (3.9) -->
+  <div class="modal-overlay" id="circuitModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3>⚡ Cảnh báo an toàn (Ngắt mạch)</h3>
+      </div>
+      <div class="modal-body">
+        <p style="margin-bottom: 8px;">
+          Hệ thống phát hiện liên tiếp nhiều lỗi kết nối hoặc phản hồi bất thường từ server VNPost.
+        </p>
+        <div class="alert-card alert-warning">
+          <span>🛡️</span>
+          <div>Tiến trình đã được tự động tạm dừng để đảm bảo an toàn cho tài khoản và dữ liệu của bạn.</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-danger" id="btnCircuitStop">Dừng hẳn</button>
+        <button class="btn btn-primary" id="btnCircuitResume">Thử tiếp tục</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== CÁC MODAL DIALOGS XỬ LÝ 3.0 ==================== -->
+
+  <!-- Modal 4: Xác nhận Xử lý 3.0 -->
+  <div class="modal-overlay" id="x30ConfirmModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3>⚡ Xác nhận chạy "Xử lý 3.0"</h3>
+      </div>
+      <div class="modal-body">
+        <p style="margin-bottom: 8px;">
+          Bạn chuẩn bị thực hiện quy trình 4 bước liên hoàn cho <strong id="x30ConfirmCount" style="color: var(--primary);">0</strong> bưu gửi.
+        </p>
+        <div class="alert-card alert-danger" style="margin-bottom: 0;">
+          <span>🛑</span>
+          <div>
+            <strong>CẢNH BÁO QUAN TRỌNG:</strong><br>
+            • Toàn bộ 4 bước: <i>Vu hồi ➔ Giao lại ➔ Lập BĐ13 ➔ Chuyển về 3.0</i> sẽ được ghi thật vào VNPost.<br>
+            • Thao tác <b>KHÔNG THỂ HOÀN TÁC</b> và không có chế độ chạy thử!<br>
+            • Vui lòng đảm bảo bạn không thao tác trên tab VNPost trong quá trình chạy.
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" id="btnX30CancelConfirm">Hủy bỏ</button>
+        <button class="btn btn-danger" id="btnX30AcceptConfirm">Đồng ý & Bắt đầu</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 5: Popup Tổng Kết Xử Lý 3.0 -->
+  <div class="modal-overlay" id="x30SummaryModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="x30SummaryTitle">🎉 Hoàn tất "Xử lý 3.0"</h3>
+      </div>
+      <div class="modal-body">
+        <div class="summary-banner" id="x30SummaryBanner">
+          <div class="summary-headline" id="x30SummaryHeadline">Thành công 0 / Tổng 0</div>
+          <div style="font-size: 11px; color: var(--text-muted);" id="x30SummarySubline">Thời gian: 0s</div>
+        </div>
+
+        <div style="font-weight: 700; font-size: 12px; margin-bottom: 6px;" id="x30FailureSectionTitle">
+          Danh sách bưu gửi lỗi / cần kiểm tra:
+        </div>
+        <div class="failure-list-box" id="x30FailureListBox"></div>
+
+        <div style="margin-top: 10px; font-size: 11.5px; color: var(--text-muted);" id="x30SummaryStatsByCode"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" id="btnX30CloseSummary">Đóng</button>
+        <button class="btn btn-primary" id="btnX30ExportResult">
+          📥 Tải file kết quả Xử lý 3.0 (.xlsx)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Nạp các thư viện Core và Controller -->
+  <script src="../vendor/xlsx.full.min.js"></script>
+  <script src="../core/errors.js"></script>
+  <script src="../core/text-utils.js"></script>
+  <script src="../core/provinces.js"></script>
+  <script src="../core/validator.js"></script>
+  <script src="../core/address-resolver.js"></script>
+  <script src="../core/model-builder.js"></script>
+  <script src="../core/process-one.js"></script>
+  <script src="../core/prepare.js"></script>
+  <script src="../core/runner.js"></script>
+  <script src="../core/exporter.js"></script>
+  <script src="../core/xuly30.js"></script>
+  <script src="page-bridge.js"></script>
+  <script src="xuly30-bridge.js"></script>
+  <script src="app.js"></script>
+  <script src="xuly30-ui.js"></script>
+</body>
+</html>
